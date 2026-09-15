@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Pruebas Eléctricas — Bijao Electric</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BECO Gen">
+
+<!-- MSAL v3 -->
+<script src="https://alcdn.msauth.net/browser/3.27.0/js/msal-browser.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1F3864;--navy2:#2E5E9E;--navy-light:#D5E8F0;
+  --bg:#F4F3F0;--surface:#FFFFFF;--surface2:#F8F8F6;
+  --text:#0B0B0B;--text2:#52514E;--text3:#898781;
+  --border:#E1E0D9;--border2:#C3C2B7;
+  --danger-bg:#FCEBEB;--danger-text:#791F1F;--danger-border:#F09595;
+  --warn-bg:#FAEEDA;--warn-text:#633806;--warn-border:#EF9F27;
+  --ok-bg:#EAF3DE;--ok-text:#27500A;--ok-border:#97C459;
+  --accent-bg:#E6F1FB;--accent-text:#0C447C;
+  --u1:#1F3864;--u2:#1baf7a;--u3:#C55A11;
+  --radius:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ── Corporate header ── */
+.corp-header{background:var(--navy);padding:0}
+.corp-header-inner{display:flex;align-items:stretch;justify-content:space-between;max-width:1280px;margin:0 auto;padding:0 1.5rem}
+.corp-brand{display:flex;align-items:center;gap:12px;padding:1rem 0}
+.corp-logo-mark{width:38px;height:38px;background:var(--surface);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy);letter-spacing:-.5px;flex-shrink:0}
+.corp-logo-text{color:#fff;font-size:15px;font-weight:600;line-height:1.2}
+.corp-logo-sub{color:#85B7EB;font-size:11px;margin-top:1px}
+.corp-meta{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:4px}
+.corp-meta-label{color:#85B7EB;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.corp-meta-value{color:#fff;font-size:13px;font-weight:500}
+.auth-status{display:flex;align-items:center;gap:8px;padding:.5rem 0}
+.auth-btn{padding:6px 14px;border-radius:var(--radius);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.auth-btn:hover{background:rgba(255,255,255,.2)}
+.auth-btn.sign-out{border-color:rgba(255,255,255,.2);background:transparent;color:#85B7EB}
+.auth-user{color:#85B7EB;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Nav bar ── */
+.nav-bar{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.nav-bar-inner{max-width:1280px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nav-tabs{display:flex;gap:0}
+.nav-tab{padding:14px 18px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-family:inherit;white-space:nowrap}
+.nav-tab:hover{color:var(--navy)}
+.nav-tab.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+.nav-actions{display:flex;align-items:center;gap:8px}
+.btn-nueva{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius);border:none;background:var(--navy);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit}
+.btn-nueva:hover{background:var(--navy2)}
+.btn-nueva:disabled{opacity:.5;cursor:not-allowed}
+.btn-refresh{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text3);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-refresh:hover{border-color:var(--navy2);color:var(--navy2)}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#97C459}
+.conn-dot.error{background:#F09595}
+.conn-dot.loading{background:#EF9F27;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Content ── */
+.content{max-width:1280px;margin:0 auto;padding:1.5rem}
+
+/* ── Auth wall ── */
+.auth-wall{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px;text-align:center}
+.auth-wall-logo{width:72px;height:72px;background:var(--navy);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;margin:0 auto}
+.auth-wall h2{font-size:18px;color:var(--text);font-weight:600}
+.auth-wall p{font-size:13px;color:var(--text3);max-width:360px}
+.btn-ms-login{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:var(--radius);border:none;background:var(--navy);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-ms-login:hover{background:var(--navy2)}
+.ms-logo{width:20px;height:20px;flex-shrink:0}
+
+/* ── Section title ── */
+.sec-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.875rem;padding-bottom:6px;border-bottom:2px solid var(--navy-light)}
+.sec-title span{color:var(--navy)}
+
+/* ── Loading ── */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--navy2);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Badges ── */
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.badge-danger{background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger-border)}
+.badge-warn{background:var(--warn-bg);color:var(--warn-text);border:1px solid var(--warn-border)}
+.badge-ok{background:var(--ok-bg);color:var(--ok-text);border:1px solid var(--ok-border)}
+.badge-accent{background:var(--accent-bg);color:var(--accent-text)}
+.badge-post{background:#F3E8FB;color:#5B1F8A;border:1px solid #C89FE0}
+
+/* ── Status cards (Resumen) ── */
+.gen-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:1.5rem}
+.gen-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.gen-card:hover{border-color:var(--navy2);box-shadow:0 0 0 3px var(--navy-light)}
+.gen-card-header{background:var(--navy);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.gen-card-title{color:#fff;font-size:14px;font-weight:600}
+.gen-card-serial{color:rgba(255,255,255,.65);font-size:11px;margin-top:1px}
+.gen-card-body{padding:.875rem 1rem}
+.gen-stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.gen-stat-row:last-child{border-bottom:none}
+.gen-stat-label{color:var(--text2)}
+.gen-stat-val{font-weight:600}
+.gen-card-footer{background:var(--surface2);padding:.5rem 1rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border)}
+
+/* ── KPI strip ── */
+.kpi-strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;min-width:100px;flex:1}
+.kpi-card.danger{border-left:3px solid #F09595;background:var(--danger-bg)}
+.kpi-card.warn{border-left:3px solid #EF9F27;background:var(--warn-bg)}
+.kpi-card.ok{border-left:3px solid #97C459;background:var(--ok-bg)}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.kpi-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.kpi-val.danger{color:var(--danger-text)}
+.kpi-val.warn{color:var(--warn-text)}
+.kpi-val.ok{color:var(--ok-text)}
+.kpi-unit{font-size:12px;font-weight:400;color:var(--text3)}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:4px}
+
+/* ── Unit layout ── */
+.unit-layout{display:grid;grid-template-columns:1fr 400px;gap:14px;align-items:start}
+@media(max-width:900px){.unit-layout{grid-template-columns:1fr}}
+.charts-col{display:flex;flex-direction:column;gap:14px}
+
+/* ── Chart card ── */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem}
+.filter-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.filter-label{font-size:11px;color:var(--text3);align-self:center}
+.f-btn{padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
+.f-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chart-legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;align-items:center}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.leg-swatch{width:20px;height:3px;border-radius:2px;display:inline-block}
+
+/* ── Table panel ── */
+.table-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-panel-head{padding:.625rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-panel-title{font-size:12px;font-weight:600;color:var(--text)}
+.table-panel-count{font-size:11px;color:var(--text3)}
+.table-scroll{overflow-x:auto}
+.tbl-wrap{overflow-x:auto;margin-top:.5rem}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{background:var(--navy);color:#fff;padding:7px 10px;text-align:left;font-size:11px;font-weight:500;white-space:nowrap}
+.data-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.data-table tbody tr{cursor:pointer;transition:background .1s}
+.data-table tbody tr:hover{background:var(--surface2)}
+.data-table tbody tr.selected{background:var(--navy-light)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table td.danger,.data-table td.warn,.data-table td.ok{font-weight:700}
+.data-table td.danger{color:var(--danger-text)}
+.data-table td.warn{color:var(--warn-text)}
+.data-table td.ok{color:var(--ok-text)}
+
+/* ── Side panel ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.side-panel{position:fixed;top:0;right:0;bottom:0;width:520px;max-width:96vw;background:var(--surface);z-index:201;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.12)}
+.side-panel.open{transform:none}
+.panel-head{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-shrink:0}
+.panel-head-title{font-size:15px;font-weight:700;color:var(--navy)}
+.panel-head-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.btn-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-close:hover{background:var(--danger-bg);color:var(--danger-text)}
+.panel-body{flex:1;overflow-y:auto;padding:1.25rem}
+.panel-actions{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.btn-pdf-panel{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-pdf-panel:hover{border-color:var(--navy2);color:var(--navy2)}
+.btn-save-od{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius);border:none;background:var(--navy);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-save-od:hover{background:var(--navy2)}
+.btn-save-od:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Detail panel sections ── */
+.p-sec{margin-bottom:1rem}
+.p-sec-title{font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--navy-light);padding-bottom:3px;margin-bottom:8px}
+.p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.p-grid-2{grid-template-columns:repeat(2,1fr)}
+.p-item .p-lbl{font-size:10px;color:var(--text3);margin-bottom:1px}
+.p-item .p-val{font-size:13px;font-weight:600;color:var(--text)}
+.p-item .p-val.danger{color:var(--danger-text)}
+.p-item .p-val.warn{color:var(--warn-text)}
+.p-item .p-val.ok{color:var(--ok-text)}
+.delta-up{font-size:10px;color:#C55A11;font-weight:700}
+.delta-dn{font-size:10px;color:#27500A;font-weight:700}
+.imp-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.imp-tbl th{background:var(--navy);color:#fff;padding:5px 8px;font-size:10px;font-weight:500}
+.imp-tbl td{padding:4px 8px;text-align:center;border-bottom:1px solid var(--border)}
+
+/* ── Form ── */
+.form-sec{margin-bottom:1rem}
+.form-sec-title{font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--navy-light);padding-bottom:3px;margin-bottom:8px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.form-grid-3{grid-template-columns:repeat(3,1fr)}
+.form-field{display:flex;flex-direction:column;gap:3px}
+.form-lbl{font-size:10px;color:var(--text2);font-weight:600}
+.form-input,.form-select{width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:5px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);transition:border-color .15s}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--navy2)}
+textarea.form-input{resize:vertical}
+.imp-tbl input[type=number]{width:100%;padding:4px 6px;border:1px solid var(--border2);border-radius:4px;font-size:11px;font-family:inherit;background:var(--surface)}
+.btn-guardar{display:block;width:100%;padding:10px;border-radius:var(--radius);border:none;background:var(--navy);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px;transition:background .15s}
+.btn-guardar:hover:not(:disabled){background:var(--navy2)}
+.btn-guardar:disabled{opacity:.5;cursor:not-allowed}
+.btn-pdf-form{display:block;width:100%;padding:8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px;transition:all .15s}
+.btn-pdf-form:hover{border-color:var(--navy2);color:var(--navy2)}
+.form-msg{margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;display:none}
+.form-msg.ok{display:block;background:var(--ok-bg);color:var(--ok-text);border:1px solid var(--ok-border)}
+.form-msg.err{display:block;background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger-border)}
+.form-msg.info{display:block;background:var(--accent-bg);color:var(--accent-text)}
+
+/* ── Back button ── */
+.back-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:12px;transition:all .15s}
+.back-btn:hover{border-color:var(--navy2);color:var(--navy2)}
+
+/* ── OneDrive save indicator ── */
+.od-indicator{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.od-indicator.saving{color:var(--warn-text);border-color:var(--warn-border);background:var(--warn-bg)}
+.od-indicator.saved{color:var(--ok-text);border-color:var(--ok-border);background:var(--ok-bg)}
+.od-indicator.error{color:var(--danger-text);border-color:var(--danger-border);background:var(--danger-bg)}
+</style>
+</head>
+<body>
+
+<!-- ── Corporate header ── -->
+<header class="corp-header">
+  <div class="corp-header-inner">
+    <div class="corp-brand">
+      <div class="corp-logo-mark">BE</div>
+      <div>
+        <div class="corp-logo-text">Bijao Electric Company</div>
+        <div class="corp-logo-sub">Pruebas Eléctricas — Generadores</div>
+      </div>
+    </div>
+    <div class="corp-meta">
+      <div id="authArea" class="auth-status">
+        <button class="auth-btn" id="btnLogin" onclick="signIn()">
+          <svg class="ms-logo" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+            <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+            <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+          </svg>
+          Iniciar sesión con Microsoft
+        </button>
+      </div>
+      <div class="corp-meta-label">Última actualización</div>
+      <div class="corp-meta-value" id="hdr-fecha">—</div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Nav bar ── -->
+<nav class="nav-bar">
+  <div class="nav-bar-inner">
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-home" onclick="showHome()">Resumen</button>
+      <button class="nav-tab" id="tab-g1" onclick="showGen(1)">Generador 1</button>
+      <button class="nav-tab" id="tab-g2" onclick="showGen(2)">Generador 2</button>
+      <button class="nav-tab" id="tab-g3" onclick="showGen(3)">Generador 3</button>
+    </div>
+    <div class="nav-actions">
+      <div class="conn-dot loading" id="connDot" title="Estado de conexión"></div>
+      <button class="btn-refresh" onclick="reloadData()">↺ Actualizar</button>
+      <button class="btn-nueva" id="btnNueva" onclick="openNuevaLectura()" disabled>+ Nueva Campaña</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main content ── -->
+<main class="content">
+  <div id="screen-home"></div>
+  <div id="screen-g1" style="display:none"></div>
+  <div id="screen-g2" style="display:none"></div>
+  <div id="screen-g3" style="display:none"></div>
+</main>
+
+<!-- ── Overlay + side panel ── -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="panel-head">
+    <div>
+      <div class="panel-head-title" id="panelTitle"></div>
+      <div class="panel-head-sub" id="panelSub"></div>
+    </div>
+    <button class="btn-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+  <div class="panel-actions" id="panelActions" style="display:none">
+    <button class="btn-pdf-panel" id="btnPdfPanel" onclick="triggerPanelPDF()">⬇ Imprimir / PDF</button>
+    <button class="btn-save-od" id="btnSaveOD" onclick="triggerSaveInforme()">☁ Guardar informe en OneDrive</button>
+    <span class="od-indicator" id="odIndicator" style="display:none"></span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN AZURE / GRAPH
+// ═══════════════════════════════════════════════════════════════════════
+const AZURE_CLIENT_ID = 'f6cd3474-bcc7-4387-8046-30157ab7704f';
+const AZURE_TENANT_ID = '79702418-9618-4959-9b30-5ccee5296be9';
+const DRIVE_ID        = 'b!odPVE-52iUujQ91urc-Lo313bV6eZH1Ou3oQ1j-14VSu1HnnnNkLSKc1U1wiIZh2';
+
+// Carpeta raíz en OneDrive y subcarpetas por unidad
+const OD_ROOT    = 'Pruebas de Generadores';
+const OD_FOLDERS = { 1: 'Unidad 1', 2: 'Unidad 2', 3: 'Unidad 3' };
+
+const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+
+const msalConfig = {
+  auth: {
+    clientId: AZURE_CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`,
+    redirectUri: 'https://becoelectrico.github.io/beco-generadores/'
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+};
+
+const SCOPES = ['Files.ReadWrite', 'User.Read'];
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+// ── State ───────────────────────────────────────────────────────────────
+const GEN_COLORS = {1:'#1F3864', 2:'#1baf7a', 3:'#C55A11'};
+const SERIALS    = {1:'T-02739', 2:'T-02740', 3:'T-02741'};
+const GRID = '#E1E0D9', TMUTED = '#898781', TSEC = '#52514E';
+
+let ALL  = [];
+let CHARTS = {};
+let currentScreen = 'home';
+let genChartFilter = {1:'pi', 2:'pi', 3:'pi'};
+let currentPanelUnit = null, currentPanelIdx = null;
+let currentNuevaUnit = null, currentNuevaIdx = null;
+let currentUser = null;
+
+// ── Header map ─────────────────────────────────────────────────────────
+const H = {
+  unit:'unidad', serial:'noSerie', year:'anio', tipo:'tipoEvento',
+  fecha:'fecha', ot:'otNo',
+  ue1:'ue_1min', ue10:'ue_10min', piUE:'pi_ue',
+  ve1:'ve_1min', ve10:'ve_10min', piVE:'pi_ve',
+  we1:'we_1min', we10:'we_10min', piWE:'pi_we',
+  u1v11:'u1v1_1min', u1v110:'u1v1_10min', piU1V1:'pi_u1v1',
+  v1w11:'v1w1_1min', v1w110:'v1w1_10min', piV1W1:'pi_v1w1',
+  w1u11:'w1u1_1min', w1u110:'w1u1_10min', piW1U1:'pi_w1u1',
+  p2u:'p2_u', p2v:'p2_v', p2w:'p2_w',
+  p3p:'p3_plus', p3m:'p3_minus', p3obs:'p3_obs',
+  p4:'p4_resist',
+  p5j:'p5_j', p5k:'p5_k', p5jk:'p5_jk_resist', p5obs:'p5_obs',
+  p6ir:'p6_ir', p6u1v1:'p6_u1v1', p6v1w1:'p6_v1w1', p6w1u1:'p6_w1u1', p6obs:'p6_obs',
+  p7ir:'p7_ir', p7u1v1:'p7_u1v1', p7v1w1:'p7_v1w1', p7w1u1:'p7_w1u1',
+  p8f:'p8_forward', p8r:'p8_reverse',
+  p9s1:'p9_sr1', p9s2:'p9_sr2',
+  z1v:'z1v',z1i:'z1i',z1z:'z1z',z2v:'z2v',z2i:'z2i',z2z:'z2z',
+  z3v:'z3v',z3i:'z3i',z3z:'z3z',z4v:'z4v',z4i:'z4i',z4z:'z4z',
+  z5v:'z5v',z5i:'z5i',z5z:'z5z',z6v:'z6v',z6i:'z6i',z6z:'z6z',
+  z7v:'z7v',z7i:'z7i',z7z:'z7z',
+  sup:'supervisor', tec:'tecnico', cargo:'cargoTecnico', obs:'observaciones',
+  impedancia:'impedancia'
+};
+
+function g(row, key){ return row[H[key]] !== undefined ? row[H[key]] : row[key]; }
+function num(v, dec=2){ const f=parseFloat(v); return isNaN(f)?'—':f.toFixed(dec); }
+function numRaw(v){ const f=parseFloat(v); return isNaN(f)?null:f; }
+
+function piClass(v){ const f=parseFloat(v); if(isNaN(f))return''; if(f<1.5)return'danger'; if(f<2.0)return'warn'; return'ok'; }
+function irClass(v){ const f=parseFloat(v); if(isNaN(f))return''; if(f<=0.01||f<50)return'danger'; if(f<100)return'warn'; return'ok'; }
+function badge(cls){ return cls==='danger'?'badge-danger':cls==='warn'?'badge-warn':cls==='ok'?'badge-ok':'badge-accent'; }
+function getUnit(n){ return ALL.filter(r=>g(r,'unit')==='U'+n).sort((a,b)=>Number(g(a,'year'))-Number(g(b,'year'))); }
+function lastRow(n){ const rows=getUnit(n); return rows[rows.length-1]; }
+function minPI(row){ const vals=[g(row,'piUE'),g(row,'piVE'),g(row,'piWE')].map(parseFloat).filter(v=>!isNaN(v)); return vals.length?Math.min(...vals):null; }
+function overallClass(row){ const pi=minPI(row); const ir=parseFloat(g(row,'p3p')); if((!isNaN(ir)&&ir<=0.01)||(!isNaN(pi)&&pi<1.5))return'danger'; if((!isNaN(pi)&&pi<2.0)||(!isNaN(ir)&&ir<100))return'warn'; return'ok'; }
+function overallLabel(cls){ return cls==='danger'?'CRÍTICO':cls==='warn'?'ATENCIÓN':'NORMAL'; }
+function eventBadge(tipo){ if(!tipo)return''; const post=tipo.toLowerCase().includes('post'); return `<span class="badge ${post?'badge-post':'badge-accent'}">${post?'Post-Rep.':'Mto. Anual'}</span>`; }
+function dC(id){ if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} }
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUTENTICACIÓN MSAL v3
+// ═══════════════════════════════════════════════════════════════════════
+async function initAuth(){
+  await msalInstance.initialize();
+  // Manejar redirect de vuelta
+  try { await msalInstance.handleRedirectPromise(); } catch(e){}
+
+  const accounts = msalInstance.getAllAccounts();
+  if(accounts.length > 0){
+    currentUser = accounts[0];
+    onSignedIn();
+  } else {
+    showAuthWall();
+  }
+}
+
+async function signIn(){
+  try {
+    const result = await msalInstance.loginPopup({ scopes: SCOPES });
+    currentUser = result.account;
+    onSignedIn();
+  } catch(e) {
+    console.error('Login error:', e);
+  }
+}
+
+async function signOut(){
+  await msalInstance.logoutPopup({ account: currentUser });
+  currentUser = null;
+  ALL = [];
+  onSignedOut();
+}
+
+async function getToken(){
+  if(!currentUser) throw new Error('No hay sesión activa');
+  try {
+    const r = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    return r.accessToken;
+  } catch(e) {
+    const r = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account: currentUser });
+    return r.accessToken;
+  }
+}
+
+function onSignedIn(){
+  document.getElementById('authArea').innerHTML = `
+    <span class="auth-user" title="${currentUser.username}">${currentUser.name || currentUser.username}</span>
+    <button class="auth-btn sign-out" onclick="signOut()">Cerrar sesión</button>`;
+  document.getElementById('btnNueva').disabled = false;
+  loadData();
+}
+
+function onSignedOut(){
+  document.getElementById('authArea').innerHTML = `
+    <button class="auth-btn" id="btnLogin" onclick="signIn()">
+      <svg class="ms-logo" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Iniciar sesión con Microsoft
+    </button>`;
+  document.getElementById('btnNueva').disabled = true;
+  showAuthWall();
+}
+
+function showAuthWall(){
+  document.getElementById('connDot').className = 'conn-dot error';
+  document.getElementById('screen-home').innerHTML = `
+    <div class="auth-wall">
+      <div class="auth-wall-logo">BE</div>
+      <h2>Pruebas Eléctricas de Generadores</h2>
+      <p>Inicia sesión con tu cuenta <strong>@beco.hn</strong> para acceder a los datos almacenados en OneDrive.</p>
+      <button class="btn-ms-login" onclick="signIn()">
+        <svg class="ms-logo" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+          <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+        </svg>
+        Iniciar sesión con Microsoft
+      </button>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MICROSOFT GRAPH — ONEDRIVE
+// ═══════════════════════════════════════════════════════════════════════
+
+// Construye la URL base de un item por ruta dentro del Drive
+function driveItemUrl(path){
+  const encoded = encodeURIComponent(path).replace(/%2F/g,'/');
+  return `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encoded}`;
+}
+
+// Asegura que una carpeta exista (la crea si no)
+async function ensureFolder(token, parentPath, folderName){
+  const parentUrl = `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encodeURIComponent(parentPath)}:/children`;
+  await fetch(parentUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: folderName,
+      folder: {},
+      '@microsoft.graph.conflictBehavior': 'fail'  // no lanzar error si existe
+    })
+  });
+  // Ignoramos error (409 = ya existe, que es lo esperado)
+}
+
+// Inicializa la estructura de carpetas si no existe
+async function ensureFolderStructure(token){
+  // Nivel 1: Pruebas de Generadores
+  await ensureFolder(token, '', OD_ROOT);
+  // Nivel 2: Unidad 1, 2, 3
+  for(const u of [1,2,3]){
+    await ensureFolder(token, OD_ROOT, OD_FOLDERS[u]);
+  }
+}
+
+// Lee el JSON de datos de una unidad
+async function readUnitData(token, unitNum){
+  const path = `${OD_ROOT}/${OD_FOLDERS[unitNum]}/datos.json`;
+  const url = `${driveItemUrl(path)}:/content`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if(res.status === 404) return [];
+  if(!res.ok) throw new Error(`Error leyendo Unidad ${unitNum}: ${res.status}`);
+  return await res.json();
+}
+
+// Escribe el JSON de datos de una unidad
+async function writeUnitData(token, unitNum, data){
+  const path = `${OD_ROOT}/${OD_FOLDERS[unitNum]}/datos.json`;
+  const url = `${driveItemUrl(path)}:/content`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data, null, 2)
+  });
+  if(!res.ok) throw new Error(`Error guardando Unidad ${unitNum}: ${res.status}`);
+  return res.json();
+}
+
+// Guarda un informe HTML en OneDrive
+async function writeInformeHTML(token, unitNum, anio, htmlContent){
+  const fileName = `Informe_U${unitNum}_${anio}.html`;
+  const path = `${OD_ROOT}/${OD_FOLDERS[unitNum]}/${fileName}`;
+  const url = `${driveItemUrl(path)}:/content`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/html' },
+    body: htmlContent
+  });
+  if(!res.ok) throw new Error(`Error guardando informe: ${res.status}`);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CARGAR DATOS DESDE ONEDRIVE
+// ═══════════════════════════════════════════════════════════════════════
+async function loadData(){
+  if(!currentUser){ showAuthWall(); return; }
+  const dot = document.getElementById('connDot');
+  dot.className = 'conn-dot loading';
+  try {
+    const token = await getToken();
+    await ensureFolderStructure(token);
+
+    const [u1, u2, u3] = await Promise.all([
+      readUnitData(token, 1),
+      readUnitData(token, 2),
+      readUnitData(token, 3)
+    ]);
+
+    ALL = [...u1, ...u2, ...u3];
+
+    const now = new Date().toLocaleString('es-HN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('hdr-fecha').textContent = now;
+    dot.className = 'conn-dot';
+    refresh();
+  } catch(err) {
+    dot.className = 'conn-dot error';
+    document.getElementById('hdr-fecha').textContent = 'Error de conexión';
+    console.error(err);
+    if(currentScreen==='home'){
+      document.getElementById('screen-home').innerHTML =
+        `<div class="loading-wrap"><div style="color:#791F1F;font-size:13px">No se pudo conectar con OneDrive.<br><span style="color:var(--text3);font-size:12px">${err.message}</span></div></div>`;
+    }
+  }
+}
+
+function reloadData(){ loadData(); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// GUARDAR CAMPAÑA EN ONEDRIVE
+// ═══════════════════════════════════════════════════════════════════════
+async function saveCampaign(unitNum, newRecord){
+  const token = await getToken();
+  let existing = [];
+  try { existing = await readUnitData(token, unitNum); } catch(e){}
+  // Reemplazar si ya existe el mismo año
+  const idx = existing.findIndex(r => String(r.anio) === String(newRecord.anio) && r.unidad === newRecord.unidad);
+  if(idx >= 0) existing[idx] = newRecord;
+  else existing.push(newRecord);
+  existing.sort((a,b) => Number(a.anio) - Number(b.anio));
+  await writeUnitData(token, unitNum, existing);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RESUMEN (HOME)
+// ═══════════════════════════════════════════════════════════════════════
+function renderHome(){
+  const el = document.getElementById('screen-home');
+  if(!ALL.length){
+    el.innerHTML = `<div class="loading-wrap"><div style="text-align:center;color:var(--text3);font-size:13px">
+      Sin datos aún.<br><span style="font-size:12px">Usa <strong>+ Nueva Campaña</strong> para ingresar la primera campaña.</span></div></div>`;
+    return;
+  }
+
+  const genCards=[1,2,3].map(n=>{
+    const row=lastRow(n); if(!row) return `<div class="gen-card"><div class="gen-card-header"><div class="gen-card-title">Generador ${n} — Unidad U${n}</div></div><div class="gen-card-body" style="padding:1.5rem;color:var(--text3);font-size:12px">Sin campañas registradas.</div></div>`;
+    const cls=overallClass(row); const pi=minPI(row); const ir=parseFloat(g(row,'p3p')); const anio=g(row,'year'); const tipo=g(row,'tipo');
+    return `<div class="gen-card" onclick="showGen(${n})">
+      <div class="gen-card-header"><div><div class="gen-card-title">Generador ${n} — Unidad U${n}</div><div class="gen-card-serial">${SERIALS[n]}</div></div><span class="badge ${badge(cls)}">${overallLabel(cls)}</span></div>
+      <div class="gen-card-body">
+        <div class="gen-stat-row"><span class="gen-stat-label">PI mínimo (fases a tierra)</span><span class="gen-stat-val ${piClass(pi)}">${num(pi,2)}</span></div>
+        <div class="gen-stat-row"><span class="gen-stat-label">PI U-E / V-E / W-E</span><span class="gen-stat-val">${num(g(row,'piUE'),2)} / ${num(g(row,'piVE'),2)} / ${num(g(row,'piWE'),2)}</span></div>
+        <div class="gen-stat-row"><span class="gen-stat-label">IR Rotor (+) a tierra</span><span class="gen-stat-val ${irClass(ir)}">${num(ir,1)} MΩ</span></div>
+        <div class="gen-stat-row"><span class="gen-stat-label">Resist. Rotor</span><span class="gen-stat-val">${num(g(row,'p4'),1)} mΩ</span></div>
+        <div class="gen-stat-row"><span class="gen-stat-label">Escobillas SR-1 / SR-2</span><span class="gen-stat-val">${num(g(row,'p9s1'),1)} / ${num(g(row,'p9s2'),1)} mm</span></div>
+      </div>
+      <div class="gen-card-footer">Última campaña: <strong>${anio}</strong> &nbsp; ${eventBadge(tipo)}</div>
+    </div>`;
+  }).join('');
+
+  const tableRows=[1,2,3].map(n=>{
+    const rows=getUnit(n); const last=rows[rows.length-1]; if(!last) return '';
+    const cls=overallClass(last);
+    return `<tr onclick="showGen(${n})" title="Ver detalle Generador ${n}">
+      <td>Generador ${n} (U${n})</td><td>${SERIALS[n]}</td><td>${rows.length}</td><td>${g(last,'year')}</td><td>${eventBadge(g(last,'tipo'))}</td>
+      <td class="${piClass(g(last,'piUE'))}">${num(g(last,'piUE'),2)}</td><td class="${piClass(g(last,'piVE'))}">${num(g(last,'piVE'),2)}</td><td class="${piClass(g(last,'piWE'))}">${num(g(last,'piWE'),2)}</td>
+      <td class="${irClass(g(last,'p3p'))}">${num(g(last,'p3p'),1)}</td><td>${num(g(last,'p4'),1)}</td><td>${num(g(last,'p9s1'),1)} / ${num(g(last,'p9s2'),1)}</td>
+      <td><span class="badge ${badge(cls)}">${overallLabel(cls)}</span></td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="sec-title" style="margin-bottom:1rem"><span>Estado de los generadores</span> — última campaña registrada</div>
+    <div class="gen-grid">${genCards}</div>
+    <div class="chart-card">
+      <div class="sec-title"><span>Comparativa PI Estátor</span> — tendencia histórica por unidad (PI mínimo)</div>
+      <div class="chart-legend">
+        ${[1,2,3].map(n=>`<div class="leg-item"><span class="leg-swatch" style="background:${GEN_COLORS[n]}"></span>Generador ${n} / U${n}</div>`).join('')}
+        <span style="margin-left:auto;font-size:11px;color:var(--text3)">Referencia IEEE: PI ≥ 2.0</span>
+      </div>
+      <div style="height:240px"><canvas id="chartHome"></canvas></div>
+    </div>
+    <div class="sec-title"><span>Resumen histórico</span> — todas las campañas</div>
+    <div class="tbl-wrap">
+      <table class="data-table">
+        <thead><tr><th>Unidad</th><th>No. Serie</th><th>Campañas</th><th>Último Año</th><th>Tipo</th><th>PI U-E</th><th>PI V-E</th><th>PI W-E</th><th>IR Rot.+ (MΩ)</th><th>Resist. Rot. (mΩ)</th><th>SR-1/SR-2 (mm)</th><th>Estado</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+
+  dC('chartHome');
+  const allYears=[...new Set(ALL.map(r=>Number(g(r,'year'))))].sort();
+  const datasets=[1,2,3].map(n=>{
+    const rows=getUnit(n);
+    const data=allYears.map(y=>{ const row=rows.find(r=>Number(g(r,'year'))===y); return row?numRaw(minPI(row)):null; });
+    return {label:'G'+n+' PI mín.',data,borderColor:GEN_COLORS[n],backgroundColor:GEN_COLORS[n]+'20',tension:.3,pointRadius:5,pointBackgroundColor:GEN_COLORS[n],pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false};
+  });
+  datasets.push({label:'Ref. 2.0',data:allYears.map(()=>2.0),borderColor:'#EF9F27',borderDash:[4,4],pointRadius:0,borderWidth:1.5,spanGaps:true});
+  CHARTS['chartHome']=new Chart(document.getElementById('chartHome'),{
+    type:'line',data:{labels:allYears,datasets},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{position:'top',align:'end',labels:{font:{size:11},boxWidth:16,boxHeight:2,padding:12}},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}}},y:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}},min:0,title:{display:true,text:'Índice de Polarización (PI)',color:TSEC,font:{size:10}}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UNIT VIEW
+// ═══════════════════════════════════════════════════════════════════════
+function renderGen(n){
+  const rows=getUnit(n);
+  const el=document.getElementById('screen-g'+n);
+  if(!rows.length){el.innerHTML=`<button class="back-btn" onclick="showHome()">← Volver al Resumen</button><p style="color:var(--text3);font-size:13px;margin-top:8px">Sin campañas para esta unidad. Usa <strong>+ Nueva Campaña</strong>.</p>`;return;}
+  const last=rows[rows.length-1]; const cls=overallClass(last); const cf=genChartFilter[n];
+
+  const kpiTop=`<div class="kpi-strip">
+    <div class="kpi-card ${piClass(g(last,'piUE'))}"><div class="kpi-label">PI U-E</div><div class="kpi-val">${num(g(last,'piUE'),2)}</div><div class="kpi-sub">Campaña ${g(last,'year')}</div></div>
+    <div class="kpi-card ${piClass(g(last,'piVE'))}"><div class="kpi-label">PI V-E</div><div class="kpi-val">${num(g(last,'piVE'),2)}</div><div class="kpi-sub">Ref. IEEE ≥ 2.0</div></div>
+    <div class="kpi-card ${piClass(g(last,'piWE'))}"><div class="kpi-label">PI W-E</div><div class="kpi-val">${num(g(last,'piWE'),2)}</div><div class="kpi-sub">Ref. IEEE ≥ 2.0</div></div>
+    <div class="kpi-card ${irClass(g(last,'p3p'))}"><div class="kpi-label">IR Rotor (+)</div><div class="kpi-val" style="font-size:18px">${num(g(last,'p3p'),1)}<span class="kpi-unit"> MΩ</span></div><div class="kpi-sub">Ref. > 100 MΩ</div></div>
+    <div class="kpi-card"><div class="kpi-label">Resist. Rotor</div><div class="kpi-val" style="font-size:18px">${num(g(last,'p4'),1)}<span class="kpi-unit"> mΩ</span></div><div class="kpi-sub">Devanado (+)→(−)</div></div>
+    <div class="kpi-card"><div class="kpi-label">Escobillas SR-1/SR-2</div><div class="kpi-val" style="font-size:16px">${num(g(last,'p9s1'),1)}/${num(g(last,'p9s2'),1)}</div><div class="kpi-sub">mm — campaña ${g(last,'year')}</div></div>
+  </div>`;
+
+  const tRows=rows.map((row,idx)=>`
+    <tr onclick="openDetail(${n},${idx})">
+      <td style="font-weight:700">${g(row,'year')}</td><td>${eventBadge(g(row,'tipo'))}</td>
+      <td class="${piClass(g(row,'piUE'))}">${num(g(row,'piUE'),2)}</td><td class="${piClass(g(row,'piVE'))}">${num(g(row,'piVE'),2)}</td><td class="${piClass(g(row,'piWE'))}">${num(g(row,'piWE'),2)}</td>
+      <td class="${irClass(g(row,'p3p'))}">${num(g(row,'p3p'),1)}</td><td class="${irClass(g(row,'p3m'))}">${num(g(row,'p3m'),1)}</td>
+      <td>${num(g(row,'p4'),1)}</td><td>${num(g(row,'p9s1'),1)}</td><td>${num(g(row,'p9s2'),1)}</td>
+    </tr>`).join('');
+
+  const hasImp=rows.some(r=>numRaw(g(r,'z1v'))!==null);
+
+  el.innerHTML=`
+    <button class="back-btn" onclick="showHome()">← Volver al Resumen</button>
+    <div class="sec-title"><span>Generador ${n} — U${n}</span> &nbsp; ${SERIALS[n]} &nbsp; <span class="badge ${badge(cls)}">${overallLabel(cls)}</span></div>
+    ${kpiTop}
+    <div class="unit-layout">
+      <div class="charts-col">
+        <div class="chart-card" style="margin-bottom:0">
+          <div class="sec-title" style="margin-bottom:.5rem"><span>Prueba 1</span> — Tendencia PI Estátor Principal</div>
+          <div class="filter-row">
+            <span class="filter-label">Mostrar:</span>
+            <button class="f-btn ${cf==='pi'?'active':''}" onclick="setChartFilter(${n},'pi')">PI por Fase</button>
+            <button class="f-btn ${cf==='ir'?'active':''}" onclick="setChartFilter(${n},'ir')">IR Rotor</button>
+            <button class="f-btn ${cf==='brush'?'active':''}" onclick="setChartFilter(${n},'brush')">Escobillas</button>
+            <button class="f-btn ${cf==='p4'?'active':''}" onclick="setChartFilter(${n},'p4')">Resist. Devanado Rotor</button>
+            <button class="f-btn ${cf==='p5'?'active':''}" onclick="setChartFilter(${n},'p5')">J-K Resist. Estátor Exc.</button>
+            <button class="f-btn ${cf==='p6'?'active':''}" onclick="setChartFilter(${n},'p6')">Resist. Rotor Excitador</button>
+            <button class="f-btn ${cf==='p7'?'active':''}" onclick="setChartFilter(${n},'p7')">Resist. PMG</button>
+            ${hasImp?`<button class="f-btn ${cf==='imp'?'active':''}" onclick="setChartFilter(${n},'imp')">Impedancia</button>`:''}
+          </div>
+          <div style="height:220px"><canvas id="chartG${n}"></canvas></div>
+        </div>
+      </div>
+      <div>
+        <div class="table-panel">
+          <div class="table-panel-head"><span class="table-panel-title">Historial de Campañas</span><span class="table-panel-count">${rows.length} registros</span></div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr><th>Año</th><th>Tipo</th><th>PI U-E</th><th>PI V-E</th><th>PI W-E</th><th>IR+(MΩ)</th><th>IR−(MΩ)</th><th>Res.Rot(mΩ)</th><th>SR-1</th><th>SR-2</th></tr></thead>
+              <tbody id="tbody-g${n}">${tRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setTimeout(()=>buildGenChart(n), 30);
+}
+
+function setChartFilter(n, f){ genChartFilter[n]=f; renderGen(n); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHART BUILDER
+// ═══════════════════════════════════════════════════════════════════════
+function buildGenChart(n){
+  const rows=getUnit(n); const years=rows.map(r=>g(r,'year')); const cf=genChartFilter[n];
+  dC('chartG'+n);
+  const ctx=document.getElementById('chartG'+n); if(!ctx)return;
+  let datasets=[],yTitle='',yLog=false;
+
+  if(cf==='pi'){
+    datasets=[
+      {label:'PI U-E',data:rows.map(r=>numRaw(g(r,'piUE'))),borderColor:'#1F3864',backgroundColor:'#1F386420',tension:.3,pointRadius:4,pointBackgroundColor:'#1F3864',pointBorderColor:'#fff',pointBorderWidth:2},
+      {label:'PI V-E',data:rows.map(r=>numRaw(g(r,'piVE'))),borderColor:'#1baf7a',backgroundColor:'#1baf7a20',tension:.3,pointRadius:4,pointBackgroundColor:'#1baf7a',pointBorderColor:'#fff',pointBorderWidth:2},
+      {label:'PI W-E',data:rows.map(r=>numRaw(g(r,'piWE'))),borderColor:'#C55A11',backgroundColor:'#C55A1120',tension:.3,pointRadius:4,pointBackgroundColor:'#C55A11',pointBorderColor:'#fff',pointBorderWidth:2},
+      {label:'Ref. 2.0',data:years.map(()=>2.0),borderColor:'#EF9F2780',borderDash:[4,4],pointRadius:0,borderWidth:1.5},
+    ]; yTitle='Índice de Polarización (PI)';
+  } else if(cf==='ir'){
+    datasets=[
+      {label:'Campo (+) MΩ',data:rows.map(r=>numRaw(g(r,'p3p'))),borderColor:'#1F3864',tension:.3,pointRadius:4,pointBackgroundColor:'#1F3864',pointBorderColor:'#fff',pointBorderWidth:2},
+      {label:'Campo (−) MΩ',data:rows.map(r=>numRaw(g(r,'p3m'))),borderColor:'#C55A11',tension:.3,pointRadius:4,pointBackgroundColor:'#C55A11',pointBorderColor:'#fff',pointBorderWidth:2},
+    ]; yTitle='IR Rotor (MΩ)'; yLog=true;
+  } else if(cf==='brush'){
+    const bData=[{label:'SR-1 (mm)',data:rows.map(r=>numRaw(g(r,'p9s1'))),backgroundColor:'#1F386499',borderColor:'#1F3864',borderWidth:1,borderRadius:3},{label:'SR-2 (mm)',data:rows.map(r=>numRaw(g(r,'p9s2'))),backgroundColor:'#1baf7a99',borderColor:'#1baf7a',borderWidth:1,borderRadius:3}];
+    CHARTS['chartG'+n]=new Chart(ctx,{type:'bar',data:{labels:years,datasets:bData},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',align:'end',labels:{font:{size:11},boxWidth:12,boxHeight:10,padding:10}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}}},y:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}},title:{display:true,text:'Longitud (mm)',color:TSEC,font:{size:10}}}}}});
+    return;
+  } else if(cf==='p4'){
+    datasets=[{label:'(+)→(−) Resist. (mΩ)',data:rows.map(r=>numRaw(g(r,'p4'))),borderColor:'#1F3864',backgroundColor:'#1F386420',tension:.3,pointRadius:4,pointBackgroundColor:'#1F3864',pointBorderColor:'#fff',pointBorderWidth:2}];
+    yTitle='Resist. Devanado Rotor (mΩ)';
+  } else if(cf==='p5'){
+    datasets=[{label:'J-K Resist. (Ω)',data:rows.map(r=>numRaw(g(r,'p5jk'))),borderColor:'#9B59B6',backgroundColor:'#9B59B620',tension:.3,pointRadius:4,pointBackgroundColor:'#9B59B6',pointBorderColor:'#fff',pointBorderWidth:2}];
+    yTitle='J-K Resist. Estátor Excitador (Ω)';
+  } else if(cf==='p6'){
+    datasets=[
+      {label:'U1-V1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p6u1v1'))),borderColor:'#1F3864',backgroundColor:'#1F386420',tension:.3,pointRadius:4,pointBackgroundColor:'#1F3864',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+      {label:'V1-W1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p6v1w1'))),borderColor:'#1baf7a',backgroundColor:'#1baf7a20',tension:.3,pointRadius:4,pointBackgroundColor:'#1baf7a',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+      {label:'W1-U1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p6w1u1'))),borderColor:'#C55A11',backgroundColor:'#C55A1120',tension:.3,pointRadius:4,pointBackgroundColor:'#C55A11',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+    ]; yTitle='Resist. Devanado Rotor Excitador (mΩ)';
+  } else if(cf==='p7'){
+    datasets=[
+      {label:'U1-V1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p7u1v1'))),borderColor:'#1F3864',backgroundColor:'#1F386420',tension:.3,pointRadius:4,pointBackgroundColor:'#1F3864',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+      {label:'V1-W1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p7v1w1'))),borderColor:'#1baf7a',backgroundColor:'#1baf7a20',tension:.3,pointRadius:4,pointBackgroundColor:'#1baf7a',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+      {label:'W1-U1 (mΩ)',data:rows.map(r=>numRaw(g(r,'p7w1u1'))),borderColor:'#C55A11',backgroundColor:'#C55A1120',tension:.3,pointRadius:4,pointBackgroundColor:'#C55A11',pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:false},
+    ]; yTitle='Resist. Devanado PMG (mΩ)';
+  } else if(cf==='imp'){
+    const zKeys=['z1z','z2z','z3z','z4z','z5z','z6z','z7z']; const voltages=[30,60,90,120,150,180,210];
+    const impRows=rows.filter(r=>numRaw(g(r,'z1v'))!==null); const impColors=['#1F3864','#C55A11','#1baf7a','#9B59B6'];
+    CHARTS['chartG'+n]=new Chart(ctx,{type:'line',data:{labels:voltages.map(v=>v+'V'),datasets:impRows.map((r,i)=>({label:g(r,'year')+' '+String(g(r,'tipo')).split(' ')[0],data:zKeys.map(k=>numRaw(g(r,k))),borderColor:impColors[i%impColors.length],backgroundColor:impColors[i%impColors.length]+'15',tension:.3,pointRadius:4,pointBackgroundColor:impColors[i%impColors.length],pointBorderColor:'#fff',pointBorderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',align:'end',labels:{font:{size:11},boxWidth:16,boxHeight:2,padding:10}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}}},y:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}},title:{display:true,text:'Impedancia (Ω)',color:TSEC,font:{size:10}}}}}});
+    return;
+  }
+
+  CHARTS['chartG'+n]=new Chart(ctx,{type:'line',data:{labels:years,datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',align:'end',labels:{font:{size:11},boxWidth:16,boxHeight:2,padding:10}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}}},y:{type:yLog?'logarithmic':'linear',grid:{color:GRID},ticks:{color:TMUTED,font:{size:10}},title:{display:true,text:yTitle,color:TSEC,font:{size:10}}}}}});
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════════════════════════════════
+function openDetail(n, idx){
+  currentPanelUnit=n; currentPanelIdx=idx;
+  const rows=getUnit(n); const row=rows[idx], prev=idx>0?rows[idx-1]:null;
+  document.querySelectorAll(`#tbody-g${n} tr`).forEach((tr,i)=>tr.classList.toggle('selected',i===idx));
+  document.getElementById('panelTitle').textContent=`Generador ${n} — Campaña ${g(row,'year')}`;
+  document.getElementById('panelSub').textContent=g(row,'tipo')||'';
+  document.getElementById('panelActions').style.display='flex';
+  document.getElementById('btnSaveOD').textContent='☁ Guardar informe en OneDrive';
+  document.getElementById('btnSaveOD').disabled=false;
+  document.getElementById('odIndicator').style.display='none';
+
+  function delta(key){ if(!prev)return''; const c=parseFloat(g(row,key)),p=parseFloat(g(prev,key)); if(isNaN(c)||isNaN(p)||p===0)return''; const pct=((c-p)/Math.abs(p)*100).toFixed(1); return ` <span class="${c>p?'delta-up':'delta-dn'}">${c>p?'↑':'↓'}${Math.abs(pct)}%</span>`; }
+  function v(key,dec=2){ return num(g(row,key),dec); }
+  const hasImp=numRaw(g(row,'z1v'))!==null;
+  const impRows=hasImp?[['z1v','z1i','z1z'],['z2v','z2i','z2z'],['z3v','z3i','z3z'],['z4v','z4i','z4z'],['z5v','z5i','z5z'],['z6v','z6i','z6z'],['z7v','z7i','z7z']].filter(k=>numRaw(g(row,k[0]))!==null):[];
+
+  document.getElementById('panelBody').innerHTML=`
+  <div class="p-sec"><div class="p-sec-title">Identificación</div><div class="p-grid p-grid-2">
+    <div class="p-item"><div class="p-lbl">Fecha</div><div class="p-val">${g(row,'fecha')||'—'}</div></div>
+    <div class="p-item"><div class="p-lbl">OT No.</div><div class="p-val">${g(row,'ot')||'—'}</div></div>
+    <div class="p-item"><div class="p-lbl">Supervisor</div><div class="p-val">${g(row,'sup')||'—'}</div></div>
+    <div class="p-item"><div class="p-lbl">Técnico</div><div class="p-val">${g(row,'tec')||'—'} (${g(row,'cargo')||'—'})</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P1 — IR Estátor Principal (GΩ) · PI</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">U-E 1min</div><div class="p-val">${v('ue1',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">U-E 10min</div><div class="p-val">${v('ue10',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">PI U-E</div><div class="p-val ${piClass(g(row,'piUE'))}">${v('piUE',2)}${delta('piUE')}</div></div>
+    <div class="p-item"><div class="p-lbl">V-E 1min</div><div class="p-val">${v('ve1',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">V-E 10min</div><div class="p-val">${v('ve10',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">PI V-E</div><div class="p-val ${piClass(g(row,'piVE'))}">${v('piVE',2)}${delta('piVE')}</div></div>
+    <div class="p-item"><div class="p-lbl">W-E 1min</div><div class="p-val">${v('we1',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">W-E 10min</div><div class="p-val">${v('we10',3)} GΩ</div></div>
+    <div class="p-item"><div class="p-lbl">PI W-E</div><div class="p-val ${piClass(g(row,'piWE'))}">${v('piWE',2)}${delta('piWE')}</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P2 — Resist. Devanado Estátor (mΩ)</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">Fase U</div><div class="p-val">${v('p2u',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">Fase V</div><div class="p-val">${v('p2v',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">Fase W</div><div class="p-val">${v('p2w',3)}</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P3 — IR Rotor Principal (MΩ) · P4 — Resist. Rotor (mΩ)</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">Campo (+) a E</div><div class="p-val ${irClass(g(row,'p3p'))}">${v('p3p',1)} MΩ${delta('p3p')}</div></div>
+    <div class="p-item"><div class="p-lbl">Campo (−) a E</div><div class="p-val ${irClass(g(row,'p3m'))}">${v('p3m',1)} MΩ${delta('p3m')}</div></div>
+    <div class="p-item"><div class="p-lbl">Simetría</div><div class="p-val">${g(row,'p3obs')||'—'}</div></div>
+    <div class="p-item"><div class="p-lbl">(+)→(−) Resist.</div><div class="p-val">${v('p4',1)} mΩ${delta('p4')}</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P5 — Estátor Excitador</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">J a Tierra (GΩ)</div><div class="p-val">${v('p5j',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">K a Tierra (GΩ)</div><div class="p-val">${v('p5k',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">J-K Resist. (Ω)</div><div class="p-val">${v('p5jk',3)}</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P6 — Rotor Excitador · P7 — PMG</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">P6 IR (MΩ)</div><div class="p-val">${v('p6ir',1)}</div></div>
+    <div class="p-item"><div class="p-lbl">P6 U1-V1 (mΩ)</div><div class="p-val">${v('p6u1v1',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">P6 V1-W1 (mΩ)</div><div class="p-val">${v('p6v1w1',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">P7 IR (MΩ)</div><div class="p-val">${v('p7ir',1)}</div></div>
+    <div class="p-item"><div class="p-lbl">P7 U1-V1 (mΩ)</div><div class="p-val">${v('p7u1v1',3)}</div></div>
+    <div class="p-item"><div class="p-lbl">P7 V1-W1 (mΩ)</div><div class="p-val">${v('p7v1w1',3)}</div></div>
+  </div></div>
+  <div class="p-sec"><div class="p-sec-title">P8 — Diodo · P9 — Escobillas</div><div class="p-grid">
+    <div class="p-item"><div class="p-lbl">Forward Bias</div><div class="p-val">${v('p8f',3)} V</div></div>
+    <div class="p-item"><div class="p-lbl">Reverse Bias</div><div class="p-val">${v('p8r',3)} V</div></div>
+    <div class="p-item"></div>
+    <div class="p-item"><div class="p-lbl">SR-1 (mm)</div><div class="p-val">${v('p9s1',2)}${delta('p9s1')}</div></div>
+    <div class="p-item"><div class="p-lbl">SR-2 (mm)</div><div class="p-val">${v('p9s2',2)}${delta('p9s2')}</div></div>
+  </div></div>
+  ${hasImp?`<div class="p-sec"><div class="p-sec-title">P10 — Impedancia Rotor Principal</div>
+    <table class="imp-tbl"><thead><tr><th>Punto</th><th>V (V)</th><th>I (A)</th><th>Z (Ω)</th></tr></thead>
+    <tbody>${impRows.map((keys,i)=>`<tr><td>${i+1}</td><td>${num(g(row,keys[0]),0)}</td><td>${num(g(row,keys[1]),4)}</td><td style="font-weight:700;color:#2E5E9E">${num(g(row,keys[2]),2)}</td></tr>`).join('')}</tbody>
+    </table></div>`:''}
+  ${g(row,'obs')?`<div class="p-sec"><div class="p-sec-title">Observaciones</div><div style="font-size:12px;color:var(--text2);line-height:1.6">${g(row,'obs')}</div></div>`:''}
+  `;
+  openPanel();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INFORME PDF / IMPRIMIR
+// ═══════════════════════════════════════════════════════════════════════
+function buildInformeHTML(n, idx){
+  const rows=getUnit(n); const row=rows[idx!==undefined?idx:rows.length-1];
+  const anio=g(row,'year'); const tipo=g(row,'tipo');
+
+  const styles=`<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:11px;color:#0B0B0B;background:#fff;padding:24px}
+    .hdr{background:#1F3864;color:#fff;padding:14px 18px;border-radius:6px;margin-bottom:18px}
+    .hdr h1{font-size:15px;font-weight:700;margin-bottom:3px}
+    .hdr p{font-size:10px;color:#85B7EB}
+    .sec{margin-bottom:14px}
+    .sec-title{font-size:9px;font-weight:700;color:#1F3864;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #D5E8F0;padding-bottom:3px;margin-bottom:8px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .item .lbl{font-size:9px;color:#898781;margin-bottom:1px}
+    .item .val{font-size:12px;font-weight:600;color:#0B0B0B}
+    .val.ok{color:#27500A}.val.warn{color:#633806}.val.crit{color:#791F1F}
+    table{width:100%;border-collapse:collapse;font-size:10px;margin-top:4px}
+    th{background:#1F3864;color:#fff;padding:5px 8px;text-align:left;font-weight:500;font-size:9px}
+    td{padding:5px 8px;border-bottom:1px solid #E1E0D9;color:#52514E;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    td:first-child{font-weight:600;color:#0B0B0B}
+    .badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
+    .badge-ok{background:#EAF3DE;color:#27500A}.badge-warn{background:#FAEEDA;color:#633806}.badge-crit{background:#FCEBEB;color:#791F1F}
+    .footer{margin-top:18px;padding-top:8px;border-top:1px solid #E1E0D9;font-size:9px;color:#898781;display:flex;justify-content:space-between}
+    @media print{body{padding:12px}}
+  </style>`;
+
+  function fv(key,dec=2){ return num(g(row,key),dec); }
+  function piCl(v){ const f=parseFloat(v); if(isNaN(f))return''; if(f<1.5)return'crit'; if(f<2.0)return'warn'; return'ok'; }
+  function irCl(v){ const f=parseFloat(v); if(isNaN(f))return''; if(f<=0.01||f<50)return'crit'; if(f<100)return'warn'; return'ok'; }
+  const hasImp=numRaw(g(row,'z1v'))!==null;
+  const impTable=hasImp?`<div class="sec"><div class="sec-title">P10 — Impedancia Rotor Principal</div>
+    <table><thead><tr><th>Punto</th><th>V (V)</th><th>I (A)</th><th>Z (Ω)</th></tr></thead>
+    <tbody>${[['z1v','z1i','z1z'],['z2v','z2i','z2z'],['z3v','z3i','z3z'],['z4v','z4i','z4z'],['z5v','z5i','z5z'],['z6v','z6i','z6z'],['z7v','z7i','z7z']].map((k,i)=>{const vv=numRaw(g(row,k[0]));if(!vv)return'';return`<tr><td>${i+1}</td><td>${num(g(row,k[0]),0)}</td><td>${num(g(row,k[1]),4)}</td><td style="font-weight:700;color:#2E5E9E">${num(g(row,k[2]),2)}</td></tr>`;}).join('')}</tbody>
+    </table></div>`:'';
+  const cls=overallClass(row);
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Prueba Eléctrica — U${n} ${anio}</title>${styles}</head><body>
+  <div class="hdr">
+    <h1>Bijao Electric Company S.A. de C.V.</h1>
+    <p>Generador ${n} — U${n} (${SERIALS[n]}) &nbsp;|&nbsp; Campaña ${anio} &nbsp;|&nbsp; ${tipo}</p>
+  </div>
+  <div class="sec"><div class="sec-title">Identificación</div><div class="grid grid-2">
+    <div class="item"><div class="lbl">Fecha</div><div class="val">${g(row,'fecha')||'—'}</div></div>
+    <div class="item"><div class="lbl">OT No.</div><div class="val">${g(row,'ot')||'—'}</div></div>
+    <div class="item"><div class="lbl">Supervisor</div><div class="val">${g(row,'sup')||'—'}</div></div>
+    <div class="item"><div class="lbl">Técnico</div><div class="val">${g(row,'tec')||'—'} (${g(row,'cargo')||'—'})</div></div>
+    <div class="item"><div class="lbl">Estado General</div><div class="val"><span class="badge badge-${cls}">${overallLabel(cls)}</span></div></div>
+  </div></div>
+  <div class="sec"><div class="sec-title">P1 — IR Estátor Principal (GΩ) / Índice de Polarización</div>
+    <table><thead><tr><th>Medición</th><th>1 min (GΩ)</th><th>10 min (GΩ)</th><th>PI</th><th>Estado PI</th></tr></thead>
+    <tbody>
+      <tr><td>U-E</td><td>${fv('ue1',3)}</td><td>${fv('ue10',3)}</td><td>${fv('piUE',2)}</td><td><span class="badge badge-${piCl(g(row,'piUE'))}">${fv('piUE',2)}</span></td></tr>
+      <tr><td>V-E</td><td>${fv('ve1',3)}</td><td>${fv('ve10',3)}</td><td>${fv('piVE',2)}</td><td><span class="badge badge-${piCl(g(row,'piVE'))}">${fv('piVE',2)}</span></td></tr>
+      <tr><td>W-E</td><td>${fv('we1',3)}</td><td>${fv('we10',3)}</td><td>${fv('piWE',2)}</td><td><span class="badge badge-${piCl(g(row,'piWE'))}">${fv('piWE',2)}</span></td></tr>
+    </tbody></table>
+  </div>
+  <div class="sec"><div class="sec-title">P2 — Resist. Devanado Estátor (mΩ)</div><div class="grid">
+    <div class="item"><div class="lbl">Fase U</div><div class="val">${fv('p2u',3)}</div></div>
+    <div class="item"><div class="lbl">Fase V</div><div class="val">${fv('p2v',3)}</div></div>
+    <div class="item"><div class="lbl">Fase W</div><div class="val">${fv('p2w',3)}</div></div>
+  </div></div>
+  <div class="sec"><div class="sec-title">P3 — IR Rotor Principal (MΩ) · P4 — Resist. Rotor (mΩ)</div>
+    <table><thead><tr><th>Medición</th><th>Valor</th><th>Simetría</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>Campo (+) a E</td><td>${fv('p3p',1)} MΩ</td><td rowspan="2">${g(row,'p3obs')||'—'}</td><td><span class="badge badge-${irCl(g(row,'p3p'))}">${irCl(g(row,'p3p'))==='ok'?'Normal':irCl(g(row,'p3p'))==='warn'?'Atención':'Crítico'}</span></td></tr>
+      <tr><td>Campo (−) a E</td><td>${fv('p3m',1)} MΩ</td><td><span class="badge badge-${irCl(g(row,'p3m'))}">${irCl(g(row,'p3m'))==='ok'?'Normal':irCl(g(row,'p3m'))==='warn'?'Atención':'Crítico'}</span></td></tr>
+      <tr><td>(+)→(−) Resist.</td><td>${fv('p4',1)} mΩ</td><td>—</td><td>—</td></tr>
+    </tbody></table>
+  </div>
+  <div class="sec"><div class="sec-title">P5 — IR & Resist. Estátor Excitador</div><div class="grid">
+    <div class="item"><div class="lbl">J a Tierra (GΩ)</div><div class="val">${fv('p5j',3)}</div></div>
+    <div class="item"><div class="lbl">K a Tierra (GΩ)</div><div class="val">${fv('p5k',3)}</div></div>
+    <div class="item"><div class="lbl">J-K Resist. (Ω)</div><div class="val">${fv('p5jk',3)}</div></div>
+  </div></div>
+  <div class="sec"><div class="sec-title">P6 — IR & Resist. Rotor Excitador · P7 — PMG</div>
+    <table><thead><tr><th>Prueba</th><th>UVW-E IR (MΩ)</th><th>U1-V1 (mΩ)</th><th>V1-W1 (mΩ)</th><th>W1-U1 (mΩ)</th><th>Simetría</th></tr></thead>
+    <tbody>
+      <tr><td>P6 Exc. Rotor</td><td>${fv('p6ir',1)}</td><td>${fv('p6u1v1',3)}</td><td>${fv('p6v1w1',3)}</td><td>${fv('p6w1u1',3)}</td><td>${g(row,'p6obs')||'—'}</td></tr>
+      <tr><td>P7 PMG</td><td>${fv('p7ir',1)}</td><td>${fv('p7u1v1',3)}</td><td>${fv('p7v1w1',3)}</td><td>${fv('p7w1u1',3)}</td><td>—</td></tr>
+    </tbody></table>
+  </div>
+  <div class="sec"><div class="sec-title">P8 — Diodo · P9 — Escobillas de Carbono</div><div class="grid">
+    <div class="item"><div class="lbl">Forward Bias (V)</div><div class="val">${fv('p8f',3)}</div></div>
+    <div class="item"><div class="lbl">Reverse Bias (V)</div><div class="val">${fv('p8r',3)}</div></div>
+    <div class="item"></div>
+    <div class="item"><div class="lbl">SR-1 (mm)</div><div class="val">${fv('p9s1',2)}</div></div>
+    <div class="item"><div class="lbl">SR-2 (mm)</div><div class="val">${fv('p9s2',2)}</div></div>
+  </div></div>
+  ${impTable}
+  ${g(row,'obs')?`<div class="sec"><div class="sec-title">Observaciones</div><p style="font-size:11px;color:#52514E;line-height:1.6;margin-top:4px">${g(row,'obs')}</p></div>`:''}
+  <div class="footer">
+    <span>Bijao Electric Company S.A. de C.V. &nbsp;|&nbsp; Departamento de Mantenimiento Eléctrico</span>
+    <span>Generado: ${new Date().toLocaleString('es-HN')}</span>
+  </div>
+</body></html>`;
+}
+
+function triggerPanelPDF(){
+  if(currentPanelUnit===null) return;
+  const rows=getUnit(currentPanelUnit);
+  const html=buildInformeHTML(currentPanelUnit, currentPanelIdx!==null?currentPanelIdx:rows.length-1);
+  const win=window.open('','_blank');
+  win.document.write(html); win.document.close(); win.focus();
+  setTimeout(()=>{ win.print(); }, 400);
+}
+
+async function triggerSaveInforme(){
+  if(currentPanelUnit===null) return;
+  const rows=getUnit(currentPanelUnit);
+  const idx=currentPanelIdx!==null?currentPanelIdx:rows.length-1;
+  const row=rows[idx];
+  const anio=g(row,'year');
+  const btn=document.getElementById('btnSaveOD');
+  const ind=document.getElementById('odIndicator');
+  btn.disabled=true; btn.textContent='Guardando...';
+  ind.style.display='inline-flex'; ind.className='od-indicator saving'; ind.textContent='⟳ Subiendo a OneDrive...';
+  try {
+    const token=await getToken();
+    const html=buildInformeHTML(currentPanelUnit, idx);
+    const meta=await writeInformeHTML(token, currentPanelUnit, anio, html);
+    ind.className='od-indicator saved';
+    ind.textContent=`✓ Guardado: Informe_U${currentPanelUnit}_${anio}.html`;
+    btn.textContent='☁ Guardar informe en OneDrive';
+    btn.disabled=false;
+  } catch(err) {
+    ind.className='od-indicator error'; ind.textContent='✗ Error: '+err.message;
+    btn.textContent='☁ Guardar informe en OneDrive'; btn.disabled=false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NUEVA CAMPAÑA
+// ═══════════════════════════════════════════════════════════════════════
+function openNuevaLectura(){
+  if(!currentUser){ alert('Inicia sesión primero.'); return; }
+  currentPanelUnit=null; currentPanelIdx=null;
+  document.getElementById('panelTitle').textContent='Nueva Campaña';
+  document.getElementById('panelSub').textContent='Ingresa los valores de la nueva campaña';
+  document.getElementById('panelActions').style.display='none';
+
+  const sel=(id,opts)=>`<select class="form-select" id="${id}">${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
+  const inp=(id,ph='',type='number')=>`<input class="form-input" id="${id}" type="${type}" step="any" placeholder="${ph}">`;
+
+  document.getElementById('panelBody').innerHTML=`
+  <div class="form-sec"><div class="form-sec-title">Identificación</div><div class="form-grid">
+    <div class="form-field"><div class="form-lbl">Unidad *</div>${sel('f-unit',['','U1','U2','U3'])}</div>
+    <div class="form-field"><div class="form-lbl">Año *</div>${inp('f-year',new Date().getFullYear())}</div>
+    <div class="form-field"><div class="form-lbl">Tipo de Evento *</div>${sel('f-tipo',['','Mantenimiento Anual','Post-Reparación de Rotor','Post-Reemplazo de Rotor','Prueba Especial'])}</div>
+    <div class="form-field"><div class="form-lbl">Fecha</div>${inp('f-fecha','DD-Mmm-AAAA','text')}</div>
+    <div class="form-field"><div class="form-lbl">OT No.</div>${inp('f-ot','Número de OT','text')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P1 — IR Estátor Principal (GΩ) · PI</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">U-E 1min (GΩ)</div>${inp('f-ue1')}</div>
+    <div class="form-field"><div class="form-lbl">U-E 10min (GΩ)</div>${inp('f-ue10')}</div>
+    <div class="form-field"><div class="form-lbl">PI U-E</div>${inp('f-piue')}</div>
+    <div class="form-field"><div class="form-lbl">V-E 1min (GΩ)</div>${inp('f-ve1')}</div>
+    <div class="form-field"><div class="form-lbl">V-E 10min (GΩ)</div>${inp('f-ve10')}</div>
+    <div class="form-field"><div class="form-lbl">PI V-E</div>${inp('f-pive')}</div>
+    <div class="form-field"><div class="form-lbl">W-E 1min (GΩ)</div>${inp('f-we1')}</div>
+    <div class="form-field"><div class="form-lbl">W-E 10min (GΩ)</div>${inp('f-we10')}</div>
+    <div class="form-field"><div class="form-lbl">PI W-E</div>${inp('f-piwe')}</div>
+    <div class="form-field"><div class="form-lbl">U1-V1 1min (GΩ)</div>${inp('f-u1v11')}</div>
+    <div class="form-field"><div class="form-lbl">U1-V1 10min (GΩ)</div>${inp('f-u1v110')}</div>
+    <div class="form-field"><div class="form-lbl">PI U1-V1</div>${inp('f-piu1v1')}</div>
+    <div class="form-field"><div class="form-lbl">V1-W1 1min (GΩ)</div>${inp('f-v1w11')}</div>
+    <div class="form-field"><div class="form-lbl">V1-W1 10min (GΩ)</div>${inp('f-v1w110')}</div>
+    <div class="form-field"><div class="form-lbl">PI V1-W1</div>${inp('f-piv1w1')}</div>
+    <div class="form-field"><div class="form-lbl">W1-U1 1min (GΩ)</div>${inp('f-w1u11')}</div>
+    <div class="form-field"><div class="form-lbl">W1-U1 10min (GΩ)</div>${inp('f-w1u110')}</div>
+    <div class="form-field"><div class="form-lbl">PI W1-U1</div>${inp('f-piw1u1')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P2 — Resist. Devanado Estátor (mΩ)</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">Fase U (mΩ)</div>${inp('f-p2u')}</div>
+    <div class="form-field"><div class="form-lbl">Fase V (mΩ)</div>${inp('f-p2v')}</div>
+    <div class="form-field"><div class="form-lbl">Fase W (mΩ)</div>${inp('f-p2w')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P3 — IR Rotor Principal (MΩ) · P4 — Resist. Rotor (mΩ)</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">Campo (+) a E (MΩ)</div>${inp('f-p3p')}</div>
+    <div class="form-field"><div class="form-lbl">Campo (−) a E (MΩ)</div>${inp('f-p3m')}</div>
+    <div class="form-field"><div class="form-lbl">Obs. Simetría</div>${sel('f-p3obs',['Simétrico','Asimétrico','⚠ FALLA','—'])}</div>
+    <div class="form-field"><div class="form-lbl">(+)→(−) Resist. (mΩ)</div>${inp('f-p4')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P5 — Estátor Excitador (GΩ / Ω)</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">J a Tierra (GΩ)</div>${inp('f-p5j')}</div>
+    <div class="form-field"><div class="form-lbl">K a Tierra (GΩ)</div>${inp('f-p5k')}</div>
+    <div class="form-field"><div class="form-lbl">J-K Resist. (Ω)</div>${inp('f-p5jk')}</div>
+    <div class="form-field"><div class="form-lbl">Simetría</div>${sel('f-p5obs',['Balanceado','Asimétrico','—'])}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P6 — Rotor Excitador (MΩ / mΩ)</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">UVW-E IR (MΩ)</div>${inp('f-p6ir')}</div>
+    <div class="form-field"><div class="form-lbl">U1-V1 Resist. (mΩ)</div>${inp('f-p6u1v1')}</div>
+    <div class="form-field"><div class="form-lbl">V1-W1 Resist. (mΩ)</div>${inp('f-p6v1w1')}</div>
+    <div class="form-field"><div class="form-lbl">W1-U1 Resist. (mΩ)</div>${inp('f-p6w1u1')}</div>
+    <div class="form-field"><div class="form-lbl">Simetría</div>${sel('f-p6obs',['Balanceado','Asimétrico','—'])}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P7 — PMG (MΩ / mΩ)</div><div class="form-grid form-grid-3">
+    <div class="form-field"><div class="form-lbl">UVW-E IR (MΩ)</div>${inp('f-p7ir')}</div>
+    <div class="form-field"><div class="form-lbl">U1-V1 Resist. (mΩ)</div>${inp('f-p7u1v1')}</div>
+    <div class="form-field"><div class="form-lbl">V1-W1 Resist. (mΩ)</div>${inp('f-p7v1w1')}</div>
+    <div class="form-field"><div class="form-lbl">W1-U1 Resist. (mΩ)</div>${inp('f-p7w1u1')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P8 — Diodo (V) · P9 — Escobillas (mm)</div><div class="form-grid">
+    <div class="form-field"><div class="form-lbl">Forward Bias (V)</div>${inp('f-p8f')}</div>
+    <div class="form-field"><div class="form-lbl">Reverse Bias (V)</div>${inp('f-p8r')}</div>
+    <div class="form-field"><div class="form-lbl">SR-1 (mm)</div>${inp('f-sr1')}</div>
+    <div class="form-field"><div class="form-lbl">SR-2 (mm)</div>${inp('f-sr2')}</div>
+  </div></div>
+
+  <div class="form-sec"><div class="form-sec-title">P10 — Impedancia Rotor Principal (opcional)</div>
+    <table class="imp-tbl"><thead><tr><th>Punto</th><th>V (V)</th><th>I (A)</th><th>Z (Ω)</th></tr></thead>
+    <tbody>${[1,2,3,4,5,6,7].map(i=>`<tr>
+      <td style="color:var(--text3);font-size:11px;padding:3px">${i}</td>
+      <td><input type="number" step="any" id="fi${i}v" placeholder="${[30,60,90,120,150,180,210][i-1]}"></td>
+      <td><input type="number" step="any" id="fi${i}i" placeholder="0.0000"></td>
+      <td><input type="number" step="any" id="fi${i}z" placeholder="0.00"></td>
+    </tr>`).join('')}</tbody></table>
+  </div>
+
+  <div class="form-sec"><div class="form-sec-title">Metadata</div><div class="form-grid">
+    <div class="form-field"><div class="form-lbl">Supervisor</div>${sel('f-sup',['Cristhyan Vallejos','Samir Zavala','Martín Jiménez','Lenin Castro','Gerson Dubon'])}</div>
+    <div class="form-field"><div class="form-lbl">Técnico</div>${sel('f-tec',['Aaron Rivera','Nahum García','Pedro Guerrero','Alejandro Aguilar','Snaider Portillo','Jorge Vargas','Henry Duran','Kelvin Paz'])}</div>
+    <div class="form-field"><div class="form-lbl">Cargo</div>${sel('f-cargo',['Técnico Electricista A','Técnico Electricista B'])}</div>
+  </div>
+  <div class="form-field" style="margin-top:8px">
+    <div class="form-lbl">Observaciones</div>
+    <textarea class="form-input" id="f-obs" rows="3" style="resize:vertical"></textarea>
+  </div></div>
+
+  <button class="btn-guardar" id="btnGuardar" onclick="submitForm()">☁ Guardar en OneDrive</button>
+  <div class="form-msg" id="formMsg"></div>`;
+  openPanel();
+}
+
+async function submitForm(){
+  const btn=document.getElementById('btnGuardar');
+  const msg=document.getElementById('formMsg');
+  msg.className='form-msg';
+  const unit=document.getElementById('f-unit').value;
+  const year=document.getElementById('f-year').value;
+  const tipo=document.getElementById('f-tipo').value;
+  if(!unit||!year||!tipo){ msg.className='form-msg err'; msg.textContent='Unidad, Año y Tipo de Evento son requeridos.'; return; }
+  const unitNum=parseInt(unit.replace('U',''));
+  btn.disabled=true; btn.textContent='Guardando en OneDrive...';
+  msg.className='form-msg info'; msg.textContent='⟳ Subiendo datos...';
+
+  const imp=[];
+  for(let i=1;i<=7;i++){
+    const vv=document.getElementById(`fi${i}v`)?.value;
+    if(vv) imp.push({v:parseFloat(vv),i:parseFloat(document.getElementById(`fi${i}i`)?.value)||0,z:parseFloat(document.getElementById(`fi${i}z`)?.value)||0});
+  }
+  const fv=id=>document.getElementById(id)?.value||'';
+
+  // Construir payload con keys que coinciden con H
+  const payload={
+    unidad:unit, noSerie:SERIALS[unitNum], anio:year, tipoEvento:tipo, fecha:fv('f-fecha'), otNo:fv('f-ot'),
+    ue_1min:fv('f-ue1'), ue_10min:fv('f-ue10'), pi_ue:fv('f-piue'),
+    ve_1min:fv('f-ve1'), ve_10min:fv('f-ve10'), pi_ve:fv('f-pive'),
+    we_1min:fv('f-we1'), we_10min:fv('f-we10'), pi_we:fv('f-piwe'),
+    u1v1_1min:fv('f-u1v11'), u1v1_10min:fv('f-u1v110'), pi_u1v1:fv('f-piu1v1'),
+    v1w1_1min:fv('f-v1w11'), v1w1_10min:fv('f-v1w110'), pi_v1w1:fv('f-piv1w1'),
+    w1u1_1min:fv('f-w1u11'), w1u1_10min:fv('f-w1u110'), pi_w1u1:fv('f-piw1u1'),
+    p2_u:fv('f-p2u'), p2_v:fv('f-p2v'), p2_w:fv('f-p2w'),
+    p3_plus:fv('f-p3p'), p3_minus:fv('f-p3m'), p3_obs:fv('f-p3obs'),
+    p4_resist:fv('f-p4'),
+    p5_j:fv('f-p5j'), p5_k:fv('f-p5k'), p5_jk_resist:fv('f-p5jk'), p5_obs:fv('f-p5obs'),
+    p6_ir:fv('f-p6ir'), p6_u1v1:fv('f-p6u1v1'), p6_v1w1:fv('f-p6v1w1'), p6_w1u1:fv('f-p6w1u1'), p6_obs:fv('f-p6obs'),
+    p7_ir:fv('f-p7ir'), p7_u1v1:fv('f-p7u1v1'), p7_v1w1:fv('f-p7v1w1'), p7_w1u1:fv('f-p7w1u1'),
+    p8_forward:fv('f-p8f'), p8_reverse:fv('f-p8r'),
+    p9_sr1:fv('f-sr1'), p9_sr2:fv('f-sr2'),
+    // impedancia: aplanar en campos z1v..z7z
+    ...(imp.reduce((acc,pt,i)=>({...acc,[`z${i+1}v`]:pt.v,[`z${i+1}i`]:pt.i,[`z${i+1}z`]:pt.z}),{})),
+    supervisor:fv('f-sup'), tecnico:fv('f-tec'), cargoTecnico:fv('f-cargo'), observaciones:fv('f-obs'),
+    _guardadoPor: currentUser?.username||'', _fechaGuardado: new Date().toISOString()
+  };
+
+  try {
+    await saveCampaign(unitNum, payload);
+    msg.className='form-msg ok'; msg.textContent=`✓ Guardado en OneDrive: ${OD_ROOT}/${OD_FOLDERS[unitNum]}/datos.json`;
+    btn.textContent='✓ Guardado';
+    setTimeout(()=>{ closePanel(); reloadData(); }, 1800);
+  } catch(err) {
+    msg.className='form-msg err'; msg.textContent='Error: '+err.message;
+    btn.disabled=false; btn.textContent='☁ Guardar en OneDrive';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════
+function showHome(){
+  currentScreen='home';
+  ['home','g1','g2','g3'].forEach((id,i)=>{
+    document.getElementById('screen-'+id).style.display=i===0?'block':'none';
+    document.getElementById('tab-'+id).classList.toggle('active',i===0);
+  });
+  renderHome();
+}
+function showGen(n){
+  currentScreen='g'+n;
+  ['home','g1','g2','g3'].forEach((id,i)=>{
+    document.getElementById('screen-'+id).style.display=i===n?'block':'none';
+    document.getElementById('tab-'+id).classList.toggle('active',i===n);
+  });
+  renderGen(n);
+}
+function refresh(){ if(currentScreen==='home') renderHome(); else{ const n=parseInt(currentScreen.replace('g','')); renderGen(n); } }
+function openPanel(){ document.getElementById('overlay').classList.add('open'); document.getElementById('sidePanel').classList.add('open'); }
+function closePanel(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sidePanel').classList.remove('open');
+  document.querySelectorAll('.data-table tr.selected').forEach(tr=>tr.classList.remove('selected'));
+}
+
+// ── PWA Service Worker ────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW no registrado:',e));
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+document.getElementById('screen-home').innerHTML='<div class="loading-wrap"><div class="spinner"></div><span style="color:var(--text3);font-size:13px">Iniciando...</span></div>';
+initAuth();
+</script>
+</body>
+</html>
