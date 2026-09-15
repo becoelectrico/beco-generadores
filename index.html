@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="BECO Gen">
 
 <!-- MSAL v3 -->
-<script src="https://alcdn.msauth.net/browser/3.27.0/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
@@ -321,7 +321,7 @@ const msalConfig = {
 
 const SCOPES = ['Files.ReadWrite', 'User.Read'];
 
-const msalInstance = new msal.PublicClientApplication(msalConfig);
+let msalInstance = null;
 
 // ── State ───────────────────────────────────────────────────────────────
 const GEN_COLORS = {1:'#1F3864', 2:'#1baf7a', 3:'#C55A11'};
@@ -381,8 +381,14 @@ function dC(id){ if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} }
 // AUTENTICACIÓN MSAL v3
 // ═══════════════════════════════════════════════════════════════════════
 async function initAuth(){
+  if(typeof msal === 'undefined'){
+    console.error('MSAL no cargó correctamente');
+    document.getElementById('screen-home').innerHTML =
+      '<div class="loading-wrap"><div style="color:#791F1F;font-size:13px">Error cargando librería de autenticación.<br><span style="font-size:12px;color:var(--text3)">Verifica tu conexión a internet y recarga la página.</span></div></div>';
+    return;
+  }
+  msalInstance = new msal.PublicClientApplication(msalConfig);
   await msalInstance.initialize();
-  // Manejar redirect de vuelta
   try { await msalInstance.handleRedirectPromise(); } catch(e){}
 
   const accounts = msalInstance.getAllAccounts();
@@ -1190,7 +1196,10 @@ if('serviceWorker' in navigator){
 
 // ── INIT ─────────────────────────────────────────────────────────────
 document.getElementById('screen-home').innerHTML='<div class="loading-wrap"><div class="spinner"></div><span style="color:var(--text3);font-size:13px">Iniciando...</span></div>';
-initAuth();
+
+window.addEventListener('load', () => {
+  initAuth();
+});
 </script>
 </body>
 </html>

@@ -6,8 +6,9 @@ const STATIC = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon.svg',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js',
-  'https://alcdn.msauth.net/browser/3.27.0/js/msal-browser.min.js'
+  'https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js'
 ];
 
 self.addEventListener('install', e => {
