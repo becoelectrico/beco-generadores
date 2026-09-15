@@ -476,13 +476,17 @@ function showAuthWall(){
 
 // Construye la URL base de un item por ruta dentro del Drive
 function driveItemUrl(path){
-  const encoded = encodeURIComponent(path).replace(/%2F/g,'/');
+  // Codificar cada segmento individualmente preservando las barras
+  const encoded = path.split('/').map(s => encodeURIComponent(s)).join('/');
   return `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encoded}`;
 }
 
 // Asegura que una carpeta exista (la crea si no)
 async function ensureFolder(token, parentPath, folderName){
-  const parentUrl = `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encodeURIComponent(parentPath)}:/children`;
+  const encodedParent = parentPath ? parentPath.split('/').map(s => encodeURIComponent(s)).join('/') : '';
+  const parentUrl = encodedParent
+    ? `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encodedParent}:/children`
+    : `${GRAPH_BASE}/drives/${DRIVE_ID}/root/children`;
   await fetch(parentUrl, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -549,17 +553,37 @@ async function loadData(){
   if(!currentUser){ showAuthWall(); return; }
   const dot = document.getElementById('connDot');
   dot.className = 'conn-dot loading';
+  const showStatus = msg => {
+    document.getElementById('screen-home').innerHTML =
+      `<div class="loading-wrap"><div class="spinner"></div><span style="color:var(--text3);font-size:13px">${msg}</span></div>`;
+  };
   try {
+    showStatus('Obteniendo token...');
     const token = await getToken();
+    showStatus('Verificando carpetas en OneDrive...');
     await ensureFolderStructure(token);
-
-    const [u1, u2, u3] = await Promise.all([
-      readUnitData(token, 1),
-      readUnitData(token, 2),
-      readUnitData(token, 3)
-    ]);
+    showStatus('Cargando datos U1...');
+    const u1 = await readUnitData(token, 1);
+    showStatus(`U1: ${u1.length} campañas — Cargando U2...`);
+    const u2 = await readUnitData(token, 2);
+    showStatus(`U2: ${u2.length} campañas — Cargando U3...`);
+    const u3 = await readUnitData(token, 3);
 
     ALL = [...u1, ...u2, ...u3];
+
+    if(ALL.length === 0){
+      dot.className = 'conn-dot error';
+      document.getElementById('hdr-fecha').textContent = 'Sin datos';
+      document.getElementById('screen-home').innerHTML =
+        `<div class="loading-wrap"><div style="color:#633806;font-size:13px">
+          Conexión OK pero no se encontraron datos.<br>
+          <span style="font-size:12px;color:var(--text3)">
+            Verifica que los archivos estén en:<br>
+            <code>Pruebas de Generadores/Unidad 1/datos.json</code>
+          </span>
+        </div></div>`;
+      return;
+    }
 
     const now = new Date().toLocaleString('es-HN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     document.getElementById('hdr-fecha').textContent = now;
@@ -568,11 +592,15 @@ async function loadData(){
   } catch(err) {
     dot.className = 'conn-dot error';
     document.getElementById('hdr-fecha').textContent = 'Error de conexión';
-    console.error(err);
-    if(currentScreen==='home'){
-      document.getElementById('screen-home').innerHTML =
-        `<div class="loading-wrap"><div style="color:#791F1F;font-size:13px">No se pudo conectar con OneDrive.<br><span style="color:var(--text3);font-size:12px">${err.message}</span></div></div>`;
-    }
+    console.error('loadData error:', err);
+    document.getElementById('screen-home').innerHTML =
+      `<div class="loading-wrap"><div style="color:#791F1F;font-size:13px;max-width:500px;text-align:center">
+        Error al cargar datos de OneDrive.<br>
+        <span style="font-size:12px;color:var(--text3)">${err.message}</span><br><br>
+        <button onclick="loadData()" style="padding:6px 16px;border-radius:6px;border:1px solid #C3C2B7;background:#fff;cursor:pointer;font-size:12px">
+          Reintentar
+        </button>
+      </div></div>`;
   }
 }
 
