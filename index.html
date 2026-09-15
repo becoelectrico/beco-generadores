@@ -1042,37 +1042,37 @@ function buildPDF(n, idx){
   const irC = v => { const f=parseFloat(v); return isNaN(f)?[137,135,129]:(f<=0.01||f<50)?[127,31,31]:f<100?[99,56,6]:[39,80,10]; };
   const anio=g(row,'year'), tipo=g(row,'tipo')||'';
 
-  // Encabezado
-  doc.setFillColor(247,248,250); doc.rect(0,0,PW,32,'F');
-  doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,32,PW,32);
-  doc.setTextColor(15,60,110); doc.setFontSize(12); doc.setFont(undefined,'bold');
-  doc.text('Bijao Electric Company S.A. de C.V.',14,10);
-  doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(80,90,100);
-  doc.text('Departamento de Mantenimiento Eléctrico',14,16);
-  doc.text('Río Bijao, Km 20 Carr. Puerto Cortés · Choloma, Cortés · Honduras',14,21);
+  // ── Encabezado compacto ─────────────────────────────────────────────
   const fEmision=new Date().toLocaleDateString('es-HN',{day:'2-digit',month:'long',year:'numeric'});
-  doc.setFontSize(8); doc.text('Fecha de emisión',PW-14,9,{align:'right'});
-  doc.setFontSize(8.5); doc.setTextColor(15,60,110); doc.setFont(undefined,'bold');
-  doc.text(fEmision,PW-14,14,{align:'right'});
-  doc.setFont(undefined,'normal'); doc.setFontSize(8); doc.setTextColor(80,90,100);
-  doc.text('Unidad / Campaña',PW-14,20,{align:'right'});
-  doc.setFontSize(8.5); doc.setTextColor(15,60,110); doc.setFont(undefined,'bold');
-  doc.text(`U${n} — ${anio}`,PW-14,25,{align:'right'});
+  // Franja navy delgada
+  doc.setFillColor(31,56,100); doc.rect(0,0,PW,14,'F');
+  // Empresa izquierda
+  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont(undefined,'bold');
+  doc.text('Bijao Electric Company S.A. de C.V.',14,6);
+  doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(180,205,230);
+  doc.text('Departamento de Mantenimiento Eléctrico  ·  Choloma, Cortés, Honduras',14,11);
+  // Fecha + unidad derecha
+  doc.setFontSize(7.5); doc.setTextColor(180,205,230);
+  doc.text(fEmision,PW-14,6,{align:'right'});
+  doc.setFontSize(8.5); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+  doc.text(`U${n} — ${anio}`,PW-14,11,{align:'right'});
 
-  // Banner
-  doc.setFillColor(240,244,250); doc.rect(0,32,PW,18,'F');
-  doc.setTextColor(12,55,103); doc.setFontSize(13); doc.setFont(undefined,'bold');
-  doc.text('Prueba Eléctrica de Generador — Informe de Campaña',14,41);
+  // ── Banner título ────────────────────────────────────────────────────
+  doc.setFillColor(240,244,250); doc.rect(0,14,PW,16,'F');
+  doc.setDrawColor(213,232,240); doc.setLineWidth(0.3); doc.line(0,30,PW,30);
+  doc.setTextColor(12,55,103); doc.setFontSize(12); doc.setFont(undefined,'bold');
+  doc.text('Prueba Eléctrica de Generador — Informe de Campaña',14,22);
   doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(100,110,120);
-  doc.text(`Generador ${n} · U${n} (${SERIALS[n]}) · ${tipo}`,14,47);
+  doc.text(`Generador ${n}  ·  U${n} (${SERIALS[n]})  ·  ${tipo}`,14,28);
+  // Badge estado
   const cls=overallClass(row);
   const clsC=cls==='danger'?[127,31,31]:cls==='warn'?[99,56,6]:[39,80,10];
   const clsB=cls==='danger'?[252,235,235]:cls==='warn'?[250,238,218]:[234,243,222];
-  doc.setFillColor(...clsB); doc.roundedRect(PW-14-30,34.5,32,9,4,4,'F');
-  doc.setTextColor(...clsC); doc.setFontSize(9); doc.setFont(undefined,'bold');
-  doc.text(overallLabel(cls),PW-14,40.5,{align:'right'});
+  doc.setFillColor(...clsB); doc.roundedRect(PW-14-28,16,30,8,3,3,'F');
+  doc.setTextColor(...clsC); doc.setFontSize(8); doc.setFont(undefined,'bold');
+  doc.text(overallLabel(cls),PW-14,21,{align:'right'});
 
-  let y=58;
+  let y=36;
   const secT=(t)=>{
     doc.setFontSize(7.5); doc.setFont(undefined,'bold'); doc.setTextColor(31,56,100);
     doc.text(t.toUpperCase(),14,y);
