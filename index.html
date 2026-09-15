@@ -15,6 +15,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -278,6 +280,36 @@ textarea.form-input{resize:vertical}
   <div id="screen-g3" style="display:none"></div>
 </main>
 
+<!-- ── Modal de correo ── -->
+<div id="modal-correo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:14px;padding:1.5rem;width:440px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px" id="modal-correo-titulo">Enviar informe por correo</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:1.25rem">Selecciona los destinatarios y agrega correos adicionales.</div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Destinatarios</div>
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="dest-cristhyan" checked> Cristhyan Vallejos &nbsp;<span style="color:var(--text3);font-size:11px">cvallejo@beco.hn</span></label>
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="dest-martin"> Martín Jiménez &nbsp;<span style="color:var(--text3);font-size:11px">mjimenez@beco.hn</span></label>
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="dest-samir"> Samir Zavala &nbsp;<span style="color:var(--text3);font-size:11px">szavala@beco.hn</span></label>
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="dest-lenin"> Lenin Castro &nbsp;<span style="color:var(--text3);font-size:11px">lcastro@beco.hn</span></label>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Agregar destinatario</div>
+      <div style="display:flex;gap:6px">
+        <input type="email" id="dest-extra-input" placeholder="correo@ejemplo.com"
+          style="flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:6px;font-size:12px;font-family:inherit"
+          onkeydown="if(event.key==='Enter') agregarDestinatarioExtra()">
+        <button onclick="agregarDestinatarioExtra()" style="padding:7px 14px;border-radius:6px;border:none;background:var(--navy);color:#fff;font-size:13px;cursor:pointer">+</button>
+      </div>
+      <div id="dest-extra-lista" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div id="modal-correo-status" style="font-size:12px;min-height:18px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="cerrarModalCorreo()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer">Cancelar</button>
+      <button id="btn-enviar-correo" onclick="enviarInformeCorreo()" style="padding:8px 18px;border-radius:6px;border:none;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer">📧 Enviar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Overlay + side panel ── -->
 <div class="overlay" id="overlay" onclick="closePanel()"></div>
 <div class="side-panel" id="sidePanel">
@@ -291,7 +323,8 @@ textarea.form-input{resize:vertical}
   <div class="panel-body" id="panelBody"></div>
   <div class="panel-actions" id="panelActions" style="display:none">
     <button class="btn-pdf-panel" id="btnPdfPanel" onclick="triggerPanelPDF()">⬇ Imprimir / PDF</button>
-    <button class="btn-save-od" id="btnSaveOD" onclick="triggerSaveInforme()">☁ Guardar informe en OneDrive</button>
+    <button class="btn-save-od" id="btnSaveOD" onclick="triggerSaveInforme()">☁ Guardar en OneDrive</button>
+    <button class="btn-save-od" id="btnEmailInforme" onclick="abrirModalCorreo()" style="background:#2E5E9E">📧 Enviar correo</button>
     <span class="od-indicator" id="odIndicator" style="display:none"></span>
   </div>
 </div>
@@ -319,7 +352,7 @@ const msalConfig = {
   cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
 };
 
-const SCOPES = ['Files.ReadWrite', 'User.Read'];
+const SCOPES = ['Files.ReadWrite', 'User.Read', 'Mail.Send'];
 
 let msalInstance = null;
 
@@ -994,36 +1027,276 @@ function buildInformeHTML(n, idx){
 </body></html>`;
 }
 
+// ── Referencia al último PDF generado ────────────────────────────────
+let _pdfB64 = null, _pdfUnit = null, _pdfIdx = null;
+
+// ── Genera PDF con jsPDF y devuelve base64 ───────────────────────────
+function buildPDF(n, idx){
+  const rows = getUnit(n);
+  const row  = rows[idx !== undefined ? idx : rows.length - 1];
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const PW = 215.9, PH = 279.4;
+  const fv  = (key, dec=2) => num(g(row,key), dec);
+  const piC = v => { const f=parseFloat(v); return isNaN(f)?[137,135,129]:f<1.5?[127,31,31]:f<2?[99,56,6]:[39,80,10]; };
+  const irC = v => { const f=parseFloat(v); return isNaN(f)?[137,135,129]:(f<=0.01||f<50)?[127,31,31]:f<100?[99,56,6]:[39,80,10]; };
+  const anio=g(row,'year'), tipo=g(row,'tipo')||'';
+
+  // Encabezado
+  doc.setFillColor(247,248,250); doc.rect(0,0,PW,32,'F');
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,32,PW,32);
+  doc.setTextColor(15,60,110); doc.setFontSize(12); doc.setFont(undefined,'bold');
+  doc.text('Bijao Electric Company S.A. de C.V.',14,10);
+  doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(80,90,100);
+  doc.text('Departamento de Mantenimiento Eléctrico',14,16);
+  doc.text('Río Bijao, Km 20 Carr. Puerto Cortés · Choloma, Cortés · Honduras',14,21);
+  const fEmision=new Date().toLocaleDateString('es-HN',{day:'2-digit',month:'long',year:'numeric'});
+  doc.setFontSize(8); doc.text('Fecha de emisión',PW-14,9,{align:'right'});
+  doc.setFontSize(8.5); doc.setTextColor(15,60,110); doc.setFont(undefined,'bold');
+  doc.text(fEmision,PW-14,14,{align:'right'});
+  doc.setFont(undefined,'normal'); doc.setFontSize(8); doc.setTextColor(80,90,100);
+  doc.text('Unidad / Campaña',PW-14,20,{align:'right'});
+  doc.setFontSize(8.5); doc.setTextColor(15,60,110); doc.setFont(undefined,'bold');
+  doc.text(`U${n} — ${anio}`,PW-14,25,{align:'right'});
+
+  // Banner
+  doc.setFillColor(240,244,250); doc.rect(0,32,PW,18,'F');
+  doc.setTextColor(12,55,103); doc.setFontSize(13); doc.setFont(undefined,'bold');
+  doc.text('Prueba Eléctrica de Generador — Informe de Campaña',14,41);
+  doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(100,110,120);
+  doc.text(`Generador ${n} · U${n} (${SERIALS[n]}) · ${tipo}`,14,47);
+  const cls=overallClass(row);
+  const clsC=cls==='danger'?[127,31,31]:cls==='warn'?[99,56,6]:[39,80,10];
+  const clsB=cls==='danger'?[252,235,235]:cls==='warn'?[250,238,218]:[234,243,222];
+  doc.setFillColor(...clsB); doc.roundedRect(PW-14-30,34.5,32,9,4,4,'F');
+  doc.setTextColor(...clsC); doc.setFontSize(9); doc.setFont(undefined,'bold');
+  doc.text(overallLabel(cls),PW-14,40.5,{align:'right'});
+
+  let y=58;
+  const secT=(t)=>{
+    doc.setFontSize(7.5); doc.setFont(undefined,'bold'); doc.setTextColor(31,56,100);
+    doc.text(t.toUpperCase(),14,y);
+    doc.setDrawColor(213,232,240); doc.setLineWidth(0.4); doc.line(14,y+1,PW-14,y+1);
+    y+=6;
+  };
+  const g3=(items)=>{
+    const cW=(PW-28)/3;
+    items.forEach((it,i)=>{
+      const x=14+(i%3)*cW;
+      if(i%3===0&&i>0) y+=12;
+      doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(137,135,129);
+      doc.text(it.label,x,y);
+      doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(...(it.color||[11,11,11]));
+      doc.text(it.val,x,y+5);
+    });
+    y+=12;
+  };
+  const tbl=(hdrs,rows2,cW2)=>{
+    const sx=14;
+    doc.setFillColor(31,56,100); doc.rect(sx,y-4,PW-28,8,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont(undefined,'bold');
+    let cx=sx+2; hdrs.forEach((h,i)=>{doc.text(h,cx,y);cx+=cW2[i];});
+    y+=5; doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78); doc.setFontSize(8);
+    rows2.forEach((r2,ri)=>{
+      if(ri%2===0){doc.setFillColor(248,248,246);doc.rect(sx,y-4,PW-28,7,'F');}
+      cx=sx+2;
+      r2.forEach((cell,i)=>{
+        if(typeof cell==='object'){doc.setTextColor(...cell.color);doc.text(cell.text,cx,y);doc.setTextColor(82,81,78);}
+        else doc.text(String(cell),cx,y);
+        cx+=cW2[i];
+      });
+      y+=7;
+    });
+    y+=4;
+  };
+
+  secT('P1 — IR Estátor Principal (GΩ) / Índice de Polarización');
+  tbl(['Fase','1min(GΩ)','10min(GΩ)','PI','Estado'],
+    [['U-E',fv('ue1',3),fv('ue10',3),fv('piUE',2),{text:parseFloat(g(row,'piUE'))<1.5?'Crítico':parseFloat(g(row,'piUE'))<2?'Atención':'Normal',color:piC(g(row,'piUE'))}],
+     ['V-E',fv('ve1',3),fv('ve10',3),fv('piVE',2),{text:parseFloat(g(row,'piVE'))<1.5?'Crítico':parseFloat(g(row,'piVE'))<2?'Atención':'Normal',color:piC(g(row,'piVE'))}],
+     ['W-E',fv('we1',3),fv('we10',3),fv('piWE',2),{text:parseFloat(g(row,'piWE'))<1.5?'Crítico':parseFloat(g(row,'piWE'))<2?'Atención':'Normal',color:piC(g(row,'piWE'))}]],
+    [14,36,36,22,60]);
+
+  secT('P2 — Resistencia Devanado Estátor (mΩ)');
+  g3([{label:'Fase U (mΩ)',val:fv('p2u',3)},{label:'Fase V (mΩ)',val:fv('p2v',3)},{label:'Fase W (mΩ)',val:fv('p2w',3)}]);
+
+  secT('P3 — IR Rotor Principal (MΩ)  ·  P4 — Resistencia Rotor (mΩ)');
+  tbl(['Medición','Valor','Simetría','Estado'],
+    [['Campo (+) a E',fv('p3p',1)+' MΩ',g(row,'p3obs')||'—',{text:parseFloat(g(row,'p3p'))<=0.01||parseFloat(g(row,'p3p'))<50?'Crítico':parseFloat(g(row,'p3p'))<100?'Atención':'Normal',color:irC(g(row,'p3p'))}],
+     ['Campo (−) a E',fv('p3m',1)+' MΩ','—',{text:parseFloat(g(row,'p3m'))<=0.01||parseFloat(g(row,'p3m'))<50?'Crítico':parseFloat(g(row,'p3m'))<100?'Atención':'Normal',color:irC(g(row,'p3m'))}],
+     ['(+)→(−) Resist.',fv('p4',1)+' mΩ','—','—']],
+    [50,40,50,40]);
+
+  secT('P5 — IR & Resistencia Estátor Excitador');
+  g3([{label:'J a Tierra (GΩ)',val:fv('p5j',3)},{label:'K a Tierra (GΩ)',val:fv('p5k',3)},{label:'J-K Resist. (Ω)',val:fv('p5jk',3)}]);
+
+  secT('P6 — Rotor Excitador  ·  P7 — PMG');
+  tbl(['Prueba','UVW-E IR (MΩ)','U1-V1 (mΩ)','V1-W1 (mΩ)','W1-U1 (mΩ)'],
+    [['P6 Exc. Rotor',fv('p6ir',1),fv('p6u1v1',3),fv('p6v1w1',3),fv('p6w1u1',3)],
+     ['P7 PMG',fv('p7ir',1),fv('p7u1v1',3),fv('p7v1w1',3),fv('p7w1u1',3)]],
+    [35,35,35,35,35]);
+
+  secT('P8 — Diodo (V)  ·  P9 — Escobillas (mm)');
+  g3([{label:'Forward Bias (V)',val:fv('p8f',3)},{label:'Reverse Bias (V)',val:fv('p8r',3)},{label:'',val:''},
+      {label:'SR-1 (mm)',val:fv('p9s1',2)},{label:'SR-2 (mm)',val:fv('p9s2',2)},{label:'',val:''}]);
+
+  const hasImp=numRaw(g(row,'z1v'))!==null;
+  if(hasImp){
+    secT('P10 — Impedancia Rotor Principal');
+    const impKeys=[['z1v','z1i','z1z'],['z2v','z2i','z2z'],['z3v','z3i','z3z'],['z4v','z4i','z4z'],['z5v','z5i','z5z'],['z6v','z6i','z6z'],['z7v','z7i','z7z']];
+    tbl(['Punto','V (V)','I (A)','Z (Ω)'],
+      impKeys.filter(k=>numRaw(g(row,k[0]))!==null).map((k,i)=>[String(i+1),num(g(row,k[0]),0)+' V',num(g(row,k[1]),4)+' A',{text:num(g(row,k[2]),2)+' Ω',color:[46,94,158]}]),
+      [20,50,60,50]);
+  }
+
+  secT('Identificación y responsables');
+  g3([{label:'Fecha',val:g(row,'fecha')||'—'},{label:'OT No.',val:g(row,'ot')||'—'},{label:'',val:''},
+      {label:'Supervisor',val:g(row,'sup')||'—'},{label:'Técnico',val:g(row,'tec')||'—'},{label:'Cargo',val:g(row,'cargo')||'—'}]);
+
+  if(g(row,'obs')){
+    secT('Observaciones');
+    doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
+    const lines=doc.splitTextToSize(g(row,'obs'),PW-28);
+    doc.text(lines,14,y); y+=lines.length*5+4;
+  }
+
+  doc.setDrawColor(225,224,217); doc.setLineWidth(0.3); doc.line(14,PH-16,PW-14,PH-16);
+  doc.setFontSize(7.5); doc.setTextColor(137,135,129); doc.setFont(undefined,'normal');
+  doc.text('Bijao Electric Company S.A. de C.V.  |  Departamento de Mantenimiento Eléctrico',14,PH-11);
+  doc.text(`Generado: ${new Date().toLocaleString('es-HN')}`,PW-14,PH-11,{align:'right'});
+
+  return doc.output('datauristring').split(',')[1];
+}
+
 function triggerPanelPDF(){
   if(currentPanelUnit===null) return;
   const rows=getUnit(currentPanelUnit);
-  const html=buildInformeHTML(currentPanelUnit, currentPanelIdx!==null?currentPanelIdx:rows.length-1);
-  const win=window.open('','_blank');
-  win.document.write(html); win.document.close(); win.focus();
-  setTimeout(()=>{ win.print(); }, 400);
+  const idx=currentPanelIdx!==null?currentPanelIdx:rows.length-1;
+  const b64=buildPDF(currentPanelUnit,idx);
+  _pdfB64=b64; _pdfUnit=currentPanelUnit; _pdfIdx=idx;
+  const byteStr=atob(b64); const ab=new ArrayBuffer(byteStr.length); const ia=new Uint8Array(ab);
+  for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+  const blob=new Blob([ab],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  const win=window.open(url,'_blank');
+  if(win) win.focus();
 }
 
 async function triggerSaveInforme(){
   if(currentPanelUnit===null) return;
   const rows=getUnit(currentPanelUnit);
   const idx=currentPanelIdx!==null?currentPanelIdx:rows.length-1;
-  const row=rows[idx];
-  const anio=g(row,'year');
+  const row=rows[idx]; const anio=g(row,'year');
   const btn=document.getElementById('btnSaveOD');
   const ind=document.getElementById('odIndicator');
   btn.disabled=true; btn.textContent='Guardando...';
-  ind.style.display='inline-flex'; ind.className='od-indicator saving'; ind.textContent='⟳ Subiendo a OneDrive...';
+  ind.style.display='inline-flex'; ind.className='od-indicator saving'; ind.textContent='⟳ Subiendo...';
   try {
     const token=await getToken();
-    const html=buildInformeHTML(currentPanelUnit, idx);
-    const meta=await writeInformeHTML(token, currentPanelUnit, anio, html);
-    ind.className='od-indicator saved';
-    ind.textContent=`✓ Guardado: Informe_U${currentPanelUnit}_${anio}.html`;
-    btn.textContent='☁ Guardar informe en OneDrive';
-    btn.disabled=false;
-  } catch(err) {
-    ind.className='od-indicator error'; ind.textContent='✗ Error: '+err.message;
-    btn.textContent='☁ Guardar informe en OneDrive'; btn.disabled=false;
+    const b64=(_pdfUnit===currentPanelUnit&&_pdfIdx===idx&&_pdfB64)?_pdfB64:buildPDF(currentPanelUnit,idx);
+    _pdfB64=b64; _pdfUnit=currentPanelUnit; _pdfIdx=idx;
+    const fileName=`Informe_U${currentPanelUnit}_${anio}.pdf`;
+    const path=`${OD_ROOT}/${OD_FOLDERS[currentPanelUnit]}/${fileName}`;
+    const url=`${driveItemUrl(path)}:/content`;
+    const byteStr=atob(b64); const ab=new ArrayBuffer(byteStr.length); const ia=new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([ab],{type:'application/pdf'});
+    const res=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/pdf'},body:blob});
+    if(!res.ok) throw new Error(`Error ${res.status}`);
+    ind.className='od-indicator saved'; ind.textContent=`✓ ${fileName}`;
+    btn.textContent='☁ Guardar en OneDrive'; btn.disabled=false;
+  } catch(err){
+    ind.className='od-indicator error'; ind.textContent='✗ '+err.message;
+    btn.textContent='☁ Guardar en OneDrive'; btn.disabled=false;
+  }
+}
+
+// ── Modal correo ──────────────────────────────────────────────────────
+let _destExtras=[];
+
+function abrirModalCorreo(){
+  if(currentPanelUnit===null) return;
+  const rows=getUnit(currentPanelUnit);
+  const idx=currentPanelIdx!==null?currentPanelIdx:rows.length-1;
+  if(!_pdfB64||_pdfUnit!==currentPanelUnit||_pdfIdx!==idx){
+    _pdfB64=buildPDF(currentPanelUnit,idx); _pdfUnit=currentPanelUnit; _pdfIdx=idx;
+  }
+  const row=rows[idx];
+  document.getElementById('modal-correo-titulo').textContent=`Enviar Informe U${currentPanelUnit} — Campaña ${g(row,'year')}`;
+  document.getElementById('modal-correo-status').textContent='';
+  document.getElementById('dest-extra-input').value='';
+  _destExtras=[]; renderDestExtras();
+  document.getElementById('modal-correo').style.display='flex';
+}
+
+function cerrarModalCorreo(){
+  document.getElementById('modal-correo').style.display='none';
+}
+
+function agregarDestinatarioExtra(){
+  const inp=document.getElementById('dest-extra-input');
+  const email=inp.value.trim();
+  if(!email||!email.includes('@')) return;
+  if(!_destExtras.includes(email)) _destExtras.push(email);
+  inp.value=''; renderDestExtras();
+}
+
+function renderDestExtras(){
+  document.getElementById('dest-extra-lista').innerHTML=_destExtras.map(e=>
+    `<span style="background:var(--accent-bg);color:var(--accent-text);font-size:11px;padding:3px 8px;border-radius:12px;display:inline-flex;align-items:center;gap:4px">
+      ${e}<span onclick="quitarExtra('${e}')" style="cursor:pointer;font-size:15px;line-height:1">&times;</span>
+    </span>`).join('');
+}
+
+function quitarExtra(email){ _destExtras=_destExtras.filter(e=>e!==email); renderDestExtras(); }
+
+async function enviarInformeCorreo(){
+  const fijos=[
+    {id:'dest-cristhyan',email:'cvallejo@beco.hn'},
+    {id:'dest-martin',   email:'mjimenez@beco.hn'},
+    {id:'dest-samir',    email:'szavala@beco.hn'},
+    {id:'dest-lenin',    email:'lcastro@beco.hn'},
+  ];
+  const destinatarios=[
+    ...fijos.filter(f=>document.getElementById(f.id)?.checked).map(f=>f.email),
+    ..._destExtras
+  ];
+  const stEl=document.getElementById('modal-correo-status');
+  if(!destinatarios.length){ stEl.style.color='var(--danger-text)'; stEl.textContent='Selecciona al menos un destinatario.'; return; }
+  const btn=document.getElementById('btn-enviar-correo');
+  btn.disabled=true; btn.textContent='Enviando...';
+  stEl.style.color='var(--text3)'; stEl.textContent='Enviando correo...';
+  try {
+    const token=await getToken();
+    const rows=getUnit(_pdfUnit);
+    const row=rows[_pdfIdx];
+    const anio=g(row,'year');
+    const sup=g(row,'sup')||'—';
+    const fileName=`Informe_U${_pdfUnit}_${anio}.pdf`;
+    const asunto=`Prueba Eléctrica Generador U${_pdfUnit} — Campaña ${anio} · BECO`;
+    const cuerpo=`<p>Estimado(a),</p>
+      <p>Se adjunta el informe de prueba eléctrica del <strong>Generador ${_pdfUnit} (U${_pdfUnit})</strong>, campaña <strong>${anio}</strong>.</p>
+      <p>Emitido por: <strong>${sup}</strong><br>Bijao Electric Company S.A. de C.V.</p>`;
+    const res=await fetch('https://graph.microsoft.com/v1.0/me/sendMail',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        message:{
+          subject:asunto,
+          body:{contentType:'HTML',content:cuerpo},
+          toRecipients:destinatarios.map(e=>({emailAddress:{address:e}})),
+          attachments:[{'@odata.type':'#microsoft.graph.fileAttachment',name:fileName,contentType:'application/pdf',contentBytes:_pdfB64}]
+        },
+        saveToSentItems:true
+      })
+    });
+    if(!res.ok){const j=await res.json();throw new Error(j.error?.message||res.status);}
+    stEl.style.color='var(--ok-text)'; stEl.textContent='✓ Correo enviado correctamente.';
+    btn.textContent='📧 Enviar';
+    setTimeout(()=>cerrarModalCorreo(),2000);
+  } catch(err){
+    stEl.style.color='var(--danger-text)'; stEl.textContent='Error: '+err.message;
+    btn.disabled=false; btn.textContent='📧 Enviar';
   }
 }
 
