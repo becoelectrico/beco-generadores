@@ -1103,14 +1103,10 @@ function buildInformeHTML(n, idx){
     const d=(key,dec,unit)=>{const c=parseFloat(g(row,key)),p=parseFloat(g(prevRow2,key));if(isNaN(c)||isNaN(p))return'—';const v=c-p;return`<span style="color:${Math.abs(v)<0.001?'#898781':v>0?'#633806':'#27500A'};font-weight:700">${v>=0?'+':''}${v.toFixed(dec)}${unit}</span> (${num(c,dec)})`;};
     return `<div class="sec"><div class="sec-title">Variación vs campaña anterior — ${g(prevRow2,'year')||'prev.'}</div><div class="grid"><div class="item"><div class="lbl">PI U-E</div><div class="val">${d('piUE',2,'')}</div></div><div class="item"><div class="lbl">PI V-E</div><div class="val">${d('piVE',2,'')}</div></div><div class="item"><div class="lbl">PI W-E</div><div class="val">${d('piWE',2,'')}</div></div><div class="item"><div class="lbl">IR Rotor (+)</div><div class="val">${d('p3p',1,' MΩ')}</div></div><div class="item"><div class="lbl">SR-1</div><div class="val">${d('p9s1',1,' mm')}</div></div><div class="item"><div class="lbl">SR-2</div><div class="val">${d('p9s2',1,' mm')}</div></div></div></div>`;
   })()}
-  <div class="sec"><div class="sec-title">Firmas y validación</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px">
-    <div><div style="border-bottom:1px solid #C3C2B7;padding-bottom:20px;margin-bottom:5px"></div>
-    <div style="font-size:9px;color:#898781">Técnico: <strong>${g(row,'tec')||'_______________________'}</strong></div>
-    <div style="font-size:9px;color:#898781">${g(row,'cargo')||''}</div></div>
-    <div><div style="border-bottom:1px solid #C3C2B7;padding-bottom:20px;margin-bottom:5px"></div>
-    <div style="font-size:9px;color:#898781">Supervisor: <strong>${g(row,'sup')||'_______________________'}</strong></div></div>
-  </div></div>
+  <div style="border-top:1px solid #C3C2B7;margin-top:14px;padding-top:7px;display:flex;gap:32px;font-size:10px">
+    <span><span style="color:#898781">Ejecutado por:</span> <strong>${g(row,'sup')||'—'}</strong></span>
+    <span><span style="color:#898781">Técnico:</span> <strong>${g(row,'tec')||'—'}</strong></span>
+  </div>
   <div class="footer">
     <span>Bijao Electric Company S.A. de C.V. &nbsp;|&nbsp; Departamento de Mantenimiento Eléctrico</span>
     <span>Generado: ${new Date().toLocaleString('es-HN')}</span>
@@ -1315,20 +1311,17 @@ function buildPDF(n, idx){
         delta('p3p',1,'MΩ','IR Rot.(+)'),delta('p9s1',1,'mm','SR-1'),delta('p9s2',1,'mm','SR-2')]);
   }
 
-  // ── Líneas de firma ─────────────────────────────────────────────────
-  if(y < 240){
-    secT('Firmas y validación');
-    const sigY=y+4;
-    doc.setDrawColor(180,178,170); doc.setLineWidth(0.4);
-    doc.line(14,sigY+10,86,sigY+10);
-    doc.line(PW/2+4,sigY+10,PW-14,sigY+10);
-    doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
-    doc.text('Técnico responsable',14,sigY+15);
-    doc.text(g(row,'tec')||'',14,sigY+20); doc.text(g(row,'cargo')||'',14,sigY+24);
-    doc.text('Supervisor / Aprobado por',PW/2+4,sigY+15);
-    doc.text(g(row,'sup')||'',PW/2+4,sigY+20);
-    y=sigY+28;
-  }
+  // ── Responsables — siempre al final ────────────────────────────────
+  y+=5;
+  doc.setDrawColor(200,198,190); doc.setLineWidth(0.25); doc.line(14,y,PW-14,y);
+  y+=6;
+  doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(137,135,129);
+  doc.text('Ejecutado por:', 14, y);
+  doc.text('Técnico:', PW/2+4, y);
+  doc.setFont(undefined,'bold'); doc.setTextColor(11,11,11);
+  doc.text(g(row,'sup')||'—', 44, y);
+  doc.text(g(row,'tec')||'—', PW/2+22, y);
+  y+=5;
 
   // Footer
   doc.setDrawColor(225,224,217); doc.setLineWidth(0.3); doc.line(14,PH-14,PW-14,PH-14);
