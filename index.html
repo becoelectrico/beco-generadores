@@ -514,29 +514,35 @@ function driveItemUrl(path){
   return `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encoded}`;
 }
 
-// Asegura que una carpeta exista (la crea si no)
+// Verifica si una carpeta existe en OneDrive
+async function folderExists(token, path){
+  const encoded = path.split('/').map(s => encodeURIComponent(s)).join('/');
+  const res = await fetch(`${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encoded}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.ok;
+}
+
+// Crea una carpeta solo si no existe
 async function ensureFolder(token, parentPath, folderName){
-  const encodedParent = parentPath ? parentPath.split('/').map(s => encodeURIComponent(s)).join('/') : '';
+  const fullPath = parentPath ? `${parentPath}/${folderName}` : folderName;
+  if(await folderExists(token, fullPath)) return; // ya existe, no hacer nada
+  const encodedParent = parentPath
+    ? parentPath.split('/').map(s => encodeURIComponent(s)).join('/')
+    : '';
   const parentUrl = encodedParent
     ? `${GRAPH_BASE}/drives/${DRIVE_ID}/root:/${encodedParent}:/children`
     : `${GRAPH_BASE}/drives/${DRIVE_ID}/root/children`;
   await fetch(parentUrl, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: folderName,
-      folder: {},
-      '@microsoft.graph.conflictBehavior': 'fail'  // no lanzar error si existe
-    })
+    body: JSON.stringify({ name: folderName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
   });
-  // Ignoramos error (409 = ya existe, que es lo esperado)
 }
 
 // Inicializa la estructura de carpetas si no existe
 async function ensureFolderStructure(token){
-  // Nivel 1: Pruebas de Generadores
-  await ensureFolder(token, '', OD_ROOT);
-  // Nivel 2: Unidad 1, 2, 3
+  await ensureFolder(token, 'Manto_Electrico', 'Pruebas de Generadores');
   for(const u of [1,2,3]){
     await ensureFolder(token, OD_ROOT, OD_FOLDERS[u]);
   }
@@ -1201,11 +1207,8 @@ async function triggerSaveInforme(){
     const byteStr=atob(b64); const ab=new ArrayBuffer(byteStr.length); const ia=new Uint8Array(ab);
     for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
     const blob=new Blob([ab],{type:'application/pdf'});
-    console.log('PUT URL:', url);
     const res=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/pdf'},body:blob});
-    const resJson = await res.json().catch(()=>({}));
-    console.log('PUT status:', res.status, 'response:', JSON.stringify(resJson).slice(0,200));
-    if(!res.ok) throw new Error(`${res.status}: ${resJson?.error?.message||'Error desconocido'}`);
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(`${res.status}: ${j?.error?.message||'Error al subir'}`); }
     ind.className='od-indicator saved'; ind.textContent=`✓ ${fileName}`;
     btn.textContent='☁ Guardar en OneDrive'; btn.disabled=false;
   } catch(err){
