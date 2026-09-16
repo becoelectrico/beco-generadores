@@ -1053,14 +1053,8 @@ function buildInformeHTML(n, idx){
   <div class="hdr">
     <h1>Bijao Electric Company S.A. de C.V.</h1>
     <p>Generador ${n} — U${n} (${SERIALS[n]}) &nbsp;|&nbsp; Campaña ${anio} &nbsp;|&nbsp; ${tipo}</p>
+    <p style="margin-top:5px;font-size:10px;color:#B8D4EE">Fecha: ${g(row,'fecha')||'—'} &nbsp;&nbsp;·&nbsp;&nbsp; OT No.: ${g(row,'ot')||'—'} &nbsp;&nbsp;·&nbsp;&nbsp; Estado: <strong style="color:#fff">${overallLabel(cls)}</strong></p>
   </div>
-  <div class="sec"><div class="sec-title">Identificación</div><div class="grid grid-2">
-    <div class="item"><div class="lbl">Fecha</div><div class="val">${g(row,'fecha')||'—'}</div></div>
-    <div class="item"><div class="lbl">OT No.</div><div class="val">${g(row,'ot')||'—'}</div></div>
-    <div class="item"><div class="lbl">Supervisor</div><div class="val">${g(row,'sup')||'—'}</div></div>
-    <div class="item"><div class="lbl">Técnico</div><div class="val">${g(row,'tec')||'—'} (${g(row,'cargo')||'—'})</div></div>
-    <div class="item"><div class="lbl">Estado General</div><div class="val"><span class="badge badge-${cls}">${overallLabel(cls)}</span></div></div>
-  </div></div>
   <div class="sec"><div class="sec-title">P1 — IR Estátor Principal (GΩ) / Índice de Polarización</div>
     <table><thead><tr><th>Medición</th><th>1 min (GΩ)</th><th>10 min (GΩ)</th><th>PI</th><th>Estado PI</th></tr></thead>
     <tbody>
@@ -1156,7 +1150,9 @@ function buildPDF(n, idx){
   doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont(undefined,'bold');
   doc.text('Bijao Electric Company  ·  Prueba Eléctrica de Generador',28,9);
   doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(180,205,230);
-  doc.text(`Generador ${n}  ·  U${n} (${SERIALS[n]})  ·  ${tipo}`,28,17);
+  doc.text(`Generador ${n}  ·  U${n} (${SERIALS[n]})  ·  ${tipo}`,28,14);
+  doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(184,212,238);
+  doc.text(`Fecha: ${g(row,'fecha')||'—'}   ·   OT No.: ${g(row,'ot')||'—'}`,28,21);
 
   // Derecha — fecha y campaña
   doc.setFontSize(7.5); doc.setTextColor(180,205,230);
@@ -1296,9 +1292,6 @@ function buildPDF(n, idx){
     tblImp(impRows);
   }
 
-  secT('Identificación y responsables');
-  g3([{label:'Fecha',val:g(row,'fecha')||'—'},{label:'OT No.',val:g(row,'ot')||'—'},{label:'',val:''},
-      {label:'Supervisor',val:g(row,'sup')||'—'},{label:'Técnico',val:g(row,'tec')||'—'},{label:'Cargo',val:g(row,'cargo')||'—'}]);
 
   if(g(row,'obs')){
     secT('Observaciones');
