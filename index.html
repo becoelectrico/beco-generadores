@@ -1201,11 +1201,15 @@ async function triggerSaveInforme(){
     const byteStr=atob(b64); const ab=new ArrayBuffer(byteStr.length); const ia=new Uint8Array(ab);
     for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
     const blob=new Blob([ab],{type:'application/pdf'});
+    console.log('PUT URL:', url);
     const res=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/pdf'},body:blob});
-    if(!res.ok) throw new Error(`Error ${res.status}`);
+    const resJson = await res.json().catch(()=>({}));
+    console.log('PUT status:', res.status, 'response:', JSON.stringify(resJson).slice(0,200));
+    if(!res.ok) throw new Error(`${res.status}: ${resJson?.error?.message||'Error desconocido'}`);
     ind.className='od-indicator saved'; ind.textContent=`✓ ${fileName}`;
     btn.textContent='☁ Guardar en OneDrive'; btn.disabled=false;
   } catch(err){
+    console.error('triggerSaveInforme error:', err);
     ind.className='od-indicator error'; ind.textContent='✗ '+err.message;
     btn.textContent='☁ Guardar en OneDrive'; btn.disabled=false;
   }
