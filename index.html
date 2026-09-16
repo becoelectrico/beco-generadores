@@ -239,14 +239,15 @@ textarea.form-input{resize:vertical}
   .auth-user{max-width:160px}
 }
 
-/* ── Nav: tabs con scroll horizontal + acciones en segunda fila ── */
+/* ── Nav: tabs scroll + acciones en fila única en portrait ── */
 @media(max-width:680px){
-  .nav-bar-inner{flex-wrap:wrap;padding:0 .75rem;gap:0}
-  .nav-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1}
+  .nav-bar-inner{flex-wrap:nowrap;padding:0 .5rem;gap:4px}
+  .nav-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;min-width:0}
   .nav-tabs::-webkit-scrollbar{display:none}
-  .nav-tab{padding:11px 12px;font-size:12px}
-  .nav-actions{width:100%;border-top:1px solid var(--border);padding:5px 0;justify-content:flex-end;gap:6px}
-  .btn-nueva,.btn-refresh{font-size:11px;padding:5px 10px}
+  .nav-tab{padding:11px 11px;font-size:12px}
+  .nav-actions{flex-shrink:0;gap:5px;padding:0}
+  .btn-nueva,.btn-refresh{font-size:11px;padding:6px 9px}
+  .btn-txt{display:none}
 }
 
 /* ── Contenido: padding reducido ── */
@@ -325,9 +326,20 @@ textarea.form-input{resize:vertical}
       </div>
       <div class="corp-meta-label">Última actualización</div>
       <div class="corp-meta-value" id="hdr-fecha">—</div>
+      <button class="auth-btn" id="btnInstall" onclick="installPWA()" style="display:none;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Instalar App
+      </button>
     </div>
   </div>
 </header>
+
+<!-- ── Banner iOS ── -->
+<div id="ios-banner" style="display:none;background:#162d55;color:#B8D4EE;font-size:12px;padding:8px 1rem;text-align:center;border-bottom:1px solid #2A4F82">
+  Para instalar la app: toca <strong style="color:#fff">↑ Compartir</strong> en Safari → <strong style="color:#fff">Añadir a pantalla de inicio</strong>
+  <button onclick="document.getElementById('ios-banner').style.display='none';localStorage.setItem('ios-banner-dismiss','1')"
+    style="margin-left:10px;background:none;border:1px solid rgba(255,255,255,.35);color:#B8D4EE;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✕</button>
+</div>
 
 <!-- ── Nav bar ── -->
 <nav class="nav-bar">
@@ -340,8 +352,8 @@ textarea.form-input{resize:vertical}
     </div>
     <div class="nav-actions">
       <div class="conn-dot loading" id="connDot" title="Estado de conexión"></div>
-      <button class="btn-refresh" onclick="reloadData()">↺ Actualizar</button>
-      <button class="btn-nueva" id="btnNueva" onclick="openNuevaLectura()" disabled>+ Nueva Campaña</button>
+      <button class="btn-refresh" onclick="reloadData()">↺<span class="btn-txt"> Actualizar</span></button>
+      <button class="btn-nueva" id="btnNueva" onclick="openNuevaLectura()" disabled>+<span class="btn-txt"> Nueva Campaña</span></button>
     </div>
   </div>
 </nav>
@@ -1706,6 +1718,42 @@ function closePanel(){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW no registrado:',e));
 }
+
+// ── PWA Install prompt (Android / Chrome) ────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  const btn = document.getElementById('btnInstall');
+  if(btn) btn.style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  _installPrompt = null;
+  const btn = document.getElementById('btnInstall');
+  if(btn) btn.style.display = 'none';
+});
+function installPWA(){
+  if(!_installPrompt) return;
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r => {
+    if(r.outcome === 'accepted'){
+      const btn = document.getElementById('btnInstall');
+      if(btn) btn.style.display = 'none';
+    }
+    _installPrompt = null;
+  });
+}
+
+// ── iOS install banner (Safari no soporta beforeinstallprompt) ────────
+(function(){
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true;
+  const dismissed = localStorage.getItem('ios-banner-dismiss');
+  if(isIOS && !isStandalone && !dismissed){
+    const b = document.getElementById('ios-banner');
+    if(b) b.style.display = 'block';
+  }
+})();
 
 // ── INIT ─────────────────────────────────────────────────────────────
 document.getElementById('screen-home').innerHTML='<div class="loading-wrap"><div class="spinner"></div><span style="color:var(--text3);font-size:13px">Iniciando...</span></div>';
