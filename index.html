@@ -1048,74 +1048,115 @@ function buildPDF(n, idx){
   const irC = v => { const f=parseFloat(v); return isNaN(f)?[137,135,129]:(f<=0.01||f<50)?[127,31,31]:f<100?[99,56,6]:[39,80,10]; };
   const anio=g(row,'year'), tipo=g(row,'tipo')||'';
 
-  // ── Encabezado compacto ─────────────────────────────────────────────
-  const fEmision=new Date().toLocaleDateString('es-HN',{day:'2-digit',month:'long',year:'numeric'});
-  // Franja navy delgada
-  doc.setFillColor(31,56,100); doc.rect(0,0,PW,14,'F');
-  // Empresa izquierda
-  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont(undefined,'bold');
-  doc.text('Bijao Electric Company S.A. de C.V.',14,6);
-  doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(180,205,230);
-  doc.text('Departamento de Mantenimiento Eléctrico  ·  Choloma, Cortés, Honduras',14,11);
-  // Fecha + unidad derecha
-  doc.setFontSize(7.5); doc.setTextColor(180,205,230);
-  doc.text(fEmision,PW-14,6,{align:'right'});
-  doc.setFontSize(8.5); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
-  doc.text(`U${n} — ${anio}`,PW-14,11,{align:'right'});
-
-  // ── Banner título ────────────────────────────────────────────────────
-  doc.setFillColor(240,244,250); doc.rect(0,14,PW,16,'F');
-  doc.setDrawColor(213,232,240); doc.setLineWidth(0.3); doc.line(0,30,PW,30);
-  doc.setTextColor(12,55,103); doc.setFontSize(12); doc.setFont(undefined,'bold');
-  doc.text('Prueba Eléctrica de Generador — Informe de Campaña',14,22);
-  doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(100,110,120);
-  doc.text(`Generador ${n}  ·  U${n} (${SERIALS[n]})  ·  ${tipo}`,14,28);
-  // Badge estado
+  // ── OPCIÓN E: encabezado mínimo + P10 en 2 columnas + padding reducido ──
+  const fEmision=new Date().toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'});
   const cls=overallClass(row);
   const clsC=cls==='danger'?[127,31,31]:cls==='warn'?[99,56,6]:[39,80,10];
   const clsB=cls==='danger'?[252,235,235]:cls==='warn'?[250,238,218]:[234,243,222];
-  doc.setFillColor(...clsB); doc.roundedRect(PW-14-28,16,30,8,3,3,'F');
-  doc.setTextColor(...clsC); doc.setFontSize(8); doc.setFont(undefined,'bold');
-  doc.text(overallLabel(cls),PW-14,21,{align:'right'});
 
-  let y=36;
+  // Franja navy única 22mm — empresa + título + campaña en una sola banda
+  doc.setFillColor(31,56,100); doc.rect(0,0,PW,22,'F');
+  doc.setDrawColor(46,94,158); doc.setLineWidth(0.4); doc.line(0,22,PW,22);
+  // Izquierda
+  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont(undefined,'bold');
+  doc.text('Bijao Electric Company  ·  Prueba Eléctrica de Generador',14,8);
+  doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(180,205,230);
+  doc.text(`Generador ${n}  ·  U${n} (${SERIALS[n]})  ·  ${tipo}`,14,15);
+  // Derecha
+  doc.setFontSize(7.5); doc.setTextColor(180,205,230);
+  doc.text(fEmision,PW-14,7,{align:'right'});
+  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+  doc.text(`U${n} — ${anio}`,PW-14,15,{align:'right'});
+  // Badge estado debajo del banner
+  doc.setFillColor(...clsB); doc.roundedRect(PW-14-24,24,26,7,2,2,'F');
+  doc.setTextColor(...clsC); doc.setFontSize(7); doc.setFont(undefined,'bold');
+  doc.text(overallLabel(cls),PW-14,29,{align:'right'});
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  let y=35;
+
+  // secT compacto: 5mm en vez de 6
   const secT=(t)=>{
-    doc.setFontSize(7.5); doc.setFont(undefined,'bold'); doc.setTextColor(31,56,100);
+    doc.setFontSize(7); doc.setFont(undefined,'bold'); doc.setTextColor(31,56,100);
     doc.text(t.toUpperCase(),14,y);
-    doc.setDrawColor(213,232,240); doc.setLineWidth(0.4); doc.line(14,y+1,PW-14,y+1);
-    y+=6;
+    doc.setDrawColor(213,232,240); doc.setLineWidth(0.3); doc.line(14,y+1,PW-14,y+1);
+    y+=5;
   };
+
+  // g3: filas de 10mm en vez de 12
   const g3=(items)=>{
     const cW=(PW-28)/3;
     items.forEach((it,i)=>{
       const x=14+(i%3)*cW;
-      if(i%3===0&&i>0) y+=12;
-      doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(137,135,129);
-      doc.text(it.label,x,y);
-      doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(...(it.color||[11,11,11]));
-      doc.text(it.val,x,y+5);
+      if(i%3===0&&i>0) y+=10;
+      doc.setFontSize(7); doc.setFont(undefined,'normal'); doc.setTextColor(137,135,129);
+      doc.text(it.label||'',x,y);
+      doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(...(it.color||[11,11,11]));
+      doc.text(it.val||'',x,y+4.5);
     });
-    y+=12;
+    y+=10;
   };
+
+  // tbl: filas de 6mm en vez de 7, header 7mm en vez de 8
   const tbl=(hdrs,rows2,cW2)=>{
     const sx=14;
-    doc.setFillColor(31,56,100); doc.rect(sx,y-4,PW-28,8,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont(undefined,'bold');
+    doc.setFillColor(31,56,100); doc.rect(sx,y-3.5,PW-28,7,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont(undefined,'bold');
     let cx=sx+2; hdrs.forEach((h,i)=>{doc.text(h,cx,y);cx+=cW2[i];});
-    y+=5; doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78); doc.setFontSize(8);
+    y+=4.5; doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78); doc.setFontSize(7.5);
     rows2.forEach((r2,ri)=>{
-      if(ri%2===0){doc.setFillColor(248,248,246);doc.rect(sx,y-4,PW-28,7,'F');}
+      if(ri%2===0){doc.setFillColor(248,248,246);doc.rect(sx,y-3.5,PW-28,6,'F');}
       cx=sx+2;
       r2.forEach((cell,i)=>{
         if(typeof cell==='object'){doc.setTextColor(...cell.color);doc.text(cell.text,cx,y);doc.setTextColor(82,81,78);}
         else doc.text(String(cell),cx,y);
         cx+=cW2[i];
       });
-      y+=7;
+      y+=6;
     });
-    y+=4;
+    y+=3;
   };
 
+  // tblImp: P10 en 2 columnas paralelas — ahorra ~30mm de altura
+  const tblImp=(impRows)=>{
+    const half=Math.ceil(impRows.length/2);
+    const left=impRows.slice(0,half); const right=impRows.slice(half);
+    const colW=(PW-28)/2-3; const gap=6; const sx=14; const midX=sx+colW+gap;
+    const hdrs=['Pto','V','I (A)','Z (Ω)'];
+    const cW=[10,22,30,colW-62];
+    // Headers
+    doc.setFillColor(31,56,100);
+    doc.rect(sx,y-3.5,colW,7,'F'); doc.rect(midX,y-3.5,colW,7,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont(undefined,'bold');
+    let cx=sx+2; hdrs.forEach((h,i)=>{doc.text(h,cx,y);cx+=cW[i];});
+    cx=midX+2; hdrs.forEach((h,i)=>{doc.text(h,cx,y);cx+=cW[i];});
+    y+=4.5;
+    doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78); doc.setFontSize(7.5);
+    const maxR=Math.max(left.length,right.length);
+    for(let ri=0;ri<maxR;ri++){
+      if(ri%2===0){
+        doc.setFillColor(248,248,246);
+        doc.rect(sx,y-3.5,colW,6,'F');
+        if(right[ri]) doc.rect(midX,y-3.5,colW,6,'F');
+      }
+      if(left[ri]){
+        cx=sx+2; left[ri].forEach((cell,i)=>{
+          if(typeof cell==='object'){doc.setTextColor(...cell.color);doc.text(cell.text,cx,y);doc.setTextColor(82,81,78);}
+          else doc.text(String(cell),cx,y); cx+=cW[i];
+        });
+      }
+      if(right[ri]){
+        cx=midX+2; right[ri].forEach((cell,i)=>{
+          if(typeof cell==='object'){doc.setTextColor(...cell.color);doc.text(cell.text,cx,y);doc.setTextColor(82,81,78);}
+          else doc.text(String(cell),cx,y); cx+=cW[i];
+        });
+      }
+      y+=6;
+    }
+    y+=3;
+  };
+
+  // ── Secciones ──────────────────────────────────────────────────────
   secT('P1 — IR Estátor Principal (GΩ) / Índice de Polarización');
   tbl(['Fase','1min(GΩ)','10min(GΩ)','PI','Estado'],
     [['U-E',fv('ue1',3),fv('ue10',3),fv('piUE',2),{text:parseFloat(g(row,'piUE'))<1.5?'Crítico':parseFloat(g(row,'piUE'))<2?'Atención':'Normal',color:piC(g(row,'piUE'))}],
@@ -1146,13 +1187,16 @@ function buildPDF(n, idx){
   g3([{label:'Forward Bias (V)',val:fv('p8f',3)},{label:'Reverse Bias (V)',val:fv('p8r',3)},{label:'',val:''},
       {label:'SR-1 (mm)',val:fv('p9s1',2)},{label:'SR-2 (mm)',val:fv('p9s2',2)},{label:'',val:''}]);
 
+  // P10 en 2 columnas
   const hasImp=numRaw(g(row,'z1v'))!==null;
   if(hasImp){
     secT('P10 — Impedancia Rotor Principal');
     const impKeys=[['z1v','z1i','z1z'],['z2v','z2i','z2z'],['z3v','z3i','z3z'],['z4v','z4i','z4z'],['z5v','z5i','z5z'],['z6v','z6i','z6z'],['z7v','z7i','z7z']];
-    tbl(['Punto','V (V)','I (A)','Z (Ω)'],
-      impKeys.filter(k=>numRaw(g(row,k[0]))!==null).map((k,i)=>[String(i+1),num(g(row,k[0]),0)+' V',num(g(row,k[1]),4)+' A',{text:num(g(row,k[2]),2)+' Ω',color:[46,94,158]}]),
-      [20,50,60,50]);
+    const impRows=impKeys.filter(k=>numRaw(g(row,k[0]))!==null).map((k,i)=>[
+      String(i+1), num(g(row,k[0]),0)+' V', num(g(row,k[1]),4)+' A',
+      {text:num(g(row,k[2]),2)+' Ω',color:[46,94,158]}
+    ]);
+    tblImp(impRows);
   }
 
   secT('Identificación y responsables');
@@ -1161,15 +1205,16 @@ function buildPDF(n, idx){
 
   if(g(row,'obs')){
     secT('Observaciones');
-    doc.setFontSize(8.5); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
+    doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
     const lines=doc.splitTextToSize(g(row,'obs'),PW-28);
-    doc.text(lines,14,y); y+=lines.length*5+4;
+    doc.text(lines,14,y); y+=lines.length*4.5+3;
   }
 
-  doc.setDrawColor(225,224,217); doc.setLineWidth(0.3); doc.line(14,PH-16,PW-14,PH-16);
-  doc.setFontSize(7.5); doc.setTextColor(137,135,129); doc.setFont(undefined,'normal');
-  doc.text('Bijao Electric Company S.A. de C.V.  |  Departamento de Mantenimiento Eléctrico',14,PH-11);
-  doc.text(`Generado: ${new Date().toLocaleString('es-HN')}`,PW-14,PH-11,{align:'right'});
+  // Footer
+  doc.setDrawColor(225,224,217); doc.setLineWidth(0.3); doc.line(14,PH-14,PW-14,PH-14);
+  doc.setFontSize(7); doc.setTextColor(137,135,129); doc.setFont(undefined,'normal');
+  doc.text('Bijao Electric Company S.A. de C.V.  |  Departamento de Mantenimiento Eléctrico',14,PH-9);
+  doc.text(`Generado: ${new Date().toLocaleString('es-HN')}`,PW-14,PH-9,{align:'right'});
 
   return doc.output('datauristring').split(',')[1];
 }
