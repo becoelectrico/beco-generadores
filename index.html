@@ -1109,12 +1109,6 @@ function buildInformeHTML(n, idx){
     const d=(key,dec,unit)=>{const c=parseFloat(g(row,key)),p=parseFloat(g(prevRow2,key));if(isNaN(c)||isNaN(p))return'—';const v=c-p;return`<span style="color:${Math.abs(v)<0.001?'#898781':v>0?'#633806':'#27500A'};font-weight:700">${v>=0?'+':''}${v.toFixed(dec)}${unit}</span> (${num(c,dec)})`;};
     return `<div class="sec"><div class="sec-title">Variación vs campaña anterior — ${g(prevRow2,'year')||'prev.'}</div><div class="grid"><div class="item"><div class="lbl">PI U-E</div><div class="val">${d('piUE',2,'')}</div></div><div class="item"><div class="lbl">PI V-E</div><div class="val">${d('piVE',2,'')}</div></div><div class="item"><div class="lbl">PI W-E</div><div class="val">${d('piWE',2,'')}</div></div><div class="item"><div class="lbl">IR Rotor (+)</div><div class="val">${d('p3p',1,' MΩ')}</div></div><div class="item"><div class="lbl">SR-1</div><div class="val">${d('p9s1',1,' mm')}</div></div><div class="item"><div class="lbl">SR-2</div><div class="val">${d('p9s2',1,' mm')}</div></div></div></div>`;
   })()}
-  <div class="sec"><div class="sec-title">Conclusión y estado general</div>
-  <p style="font-size:11px;color:#52514E;line-height:1.7;margin-top:4px">${
-    cls==='ok'?'El generador presenta condiciones eléctricas dentro de los parámetros aceptables según norma IEEE 43-2013. Se recomienda mantener el plan de mantenimiento preventivo vigente y repetir las pruebas en el próximo ciclo programado.':
-    cls==='warn'?'El generador presenta parámetros en zona de atención. Se recomienda incrementar la frecuencia de monitoreo, revisar el estado del aislamiento en las fases con PI reducido, y programar mantenimiento correctivo en el corto plazo.':
-    'El generador presenta valores críticos fuera de los límites aceptables IEEE. Se recomienda suspender operación no esencial, realizar inspección visual del aislamiento y planificar mantenimiento correctivo inmediato antes de la próxima puesta en marcha.'
-  }</p></div>
   <div class="sec"><div class="sec-title">Firmas y validación</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px">
     <div><div style="border-bottom:1px solid #C3C2B7;padding-bottom:20px;margin-bottom:5px"></div>
@@ -1326,19 +1320,6 @@ function buildPDF(n, idx){
     };
     g3([delta('piUE',2,'','PI U-E'),delta('piVE',2,'','PI V-E'),delta('piWE',2,'','PI W-E'),
         delta('p3p',1,'MΩ','IR Rot.(+)'),delta('p9s1',1,'mm','SR-1'),delta('p9s2',1,'mm','SR-2')]);
-  }
-
-  // ── Conclusión automática ───────────────────────────────────────────
-  if(y < 230){
-    secT('Conclusión y estado general');
-    const conclusionText = cls==='ok'
-      ? 'El generador presenta condiciones eléctricas dentro de los parámetros aceptables según norma IEEE 43-2013. Se recomienda mantener el plan de mantenimiento preventivo vigente y repetir las pruebas en el próximo ciclo programado.'
-      : cls==='warn'
-      ? 'El generador presenta parámetros en zona de atención. Se recomienda incrementar la frecuencia de monitoreo, revisar el estado del aislamiento en las fases con PI reducido, y programar mantenimiento correctivo en el corto plazo.'
-      : 'El generador presenta valores críticos fuera de los límites aceptables IEEE. Se recomienda suspender operación no esencial, realizar inspección visual del aislamiento y planificar mantenimiento correctivo inmediato antes de la próxima puesta en marcha.';
-    doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
-    const cLines=doc.splitTextToSize(conclusionText,PW-28);
-    doc.text(cLines,14,y); y+=cLines.length*4.5+6;
   }
 
   // ── Líneas de firma ─────────────────────────────────────────────────
