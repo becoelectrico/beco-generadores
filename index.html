@@ -223,6 +223,80 @@ textarea.form-input{resize:vertical}
 .od-indicator.saving{color:var(--warn-text);border-color:var(--warn-border);background:var(--warn-bg)}
 .od-indicator.saved{color:var(--ok-text);border-color:var(--ok-border);background:var(--ok-bg)}
 .od-indicator.error{color:var(--danger-text);border-color:var(--danger-border);background:var(--danger-bg)}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE — tablet 900px y móvil 640px / 400px
+   (unit-layout ya tiene @media(max-width:900px) arriba)
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Header: apila columnas en móvil ── */
+@media(max-width:680px){
+  .corp-header-inner{flex-direction:column;align-items:flex-start;gap:6px;padding:.75rem}
+  .corp-meta{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%}
+  .corp-meta-label{display:none}
+  .corp-meta-value{font-size:11px}
+  .auth-btn{font-size:11px;padding:5px 10px}
+  .auth-user{max-width:160px}
+}
+
+/* ── Nav: tabs con scroll horizontal + acciones en segunda fila ── */
+@media(max-width:680px){
+  .nav-bar-inner{flex-wrap:wrap;padding:0 .75rem;gap:0}
+  .nav-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1}
+  .nav-tabs::-webkit-scrollbar{display:none}
+  .nav-tab{padding:11px 12px;font-size:12px}
+  .nav-actions{width:100%;border-top:1px solid var(--border);padding:5px 0;justify-content:flex-end;gap:6px}
+  .btn-nueva,.btn-refresh{font-size:11px;padding:5px 10px}
+}
+
+/* ── Contenido: padding reducido ── */
+@media(max-width:680px){
+  .content{padding:.875rem .75rem}
+  .gen-grid{grid-template-columns:1fr}
+  .kpi-strip{gap:7px}
+  .kpi-card{min-width:calc(50% - 4px);flex:1 1 calc(50% - 4px)}
+  .kpi-val{font-size:18px}
+}
+
+/* ── Panel lateral: ancho completo en móvil ── */
+@media(max-width:600px){
+  .side-panel{width:100vw;max-width:100vw}
+  .panel-actions{flex-direction:column}
+  .btn-pdf-panel,.btn-save-od{width:100%;justify-content:center;text-align:center}
+}
+
+/* ── Grillas del panel de detalle ── */
+@media(max-width:680px){
+  .p-grid{grid-template-columns:repeat(2,1fr)}
+  .p-grid-2{grid-template-columns:1fr}
+}
+@media(max-width:400px){
+  .p-grid{grid-template-columns:1fr}
+}
+
+/* ── Grillas de formulario ── */
+@media(max-width:680px){
+  .form-grid{grid-template-columns:1fr}
+  .form-grid-3{grid-template-columns:repeat(2,1fr)}
+  .btn-guardar,.btn-pdf-form{font-size:13px}
+}
+@media(max-width:400px){
+  .form-grid-3{grid-template-columns:1fr}
+}
+
+/* ── Filtros de gráfica: scroll horizontal en móvil ── */
+@media(max-width:680px){
+  .filter-row{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
+  .filter-row::-webkit-scrollbar{display:none}
+}
+
+/* ── Tabla historial: asegurar scroll en cualquier ancho ── */
+.table-scroll{-webkit-overflow-scrolling:touch}
+
+/* ── KPI strip: 1 columna en pantallas muy pequeñas ── */
+@media(max-width:360px){
+  .kpi-card{min-width:100%;flex:1 1 100%}
+}
 </style>
 </head>
 <body>
@@ -1029,6 +1103,26 @@ function buildInformeHTML(n, idx){
   </div></div>
   ${impTable}
   ${g(row,'obs')?`<div class="sec"><div class="sec-title">Observaciones</div><p style="font-size:11px;color:#52514E;line-height:1.6;margin-top:4px">${g(row,'obs')}</p></div>`:''}
+  ${(()=>{
+    const prevRow2 = rows.length > 1 ? rows[rows.length - 2] : null;
+    if(!prevRow2) return '';
+    const d=(key,dec,unit)=>{const c=parseFloat(g(row,key)),p=parseFloat(g(prevRow2,key));if(isNaN(c)||isNaN(p))return'—';const v=c-p;return`<span style="color:${Math.abs(v)<0.001?'#898781':v>0?'#633806':'#27500A'};font-weight:700">${v>=0?'+':''}${v.toFixed(dec)}${unit}</span> (${num(c,dec)})`;};
+    return `<div class="sec"><div class="sec-title">Variación vs campaña anterior — ${g(prevRow2,'year')||'prev.'}</div><div class="grid"><div class="item"><div class="lbl">PI U-E</div><div class="val">${d('piUE',2,'')}</div></div><div class="item"><div class="lbl">PI V-E</div><div class="val">${d('piVE',2,'')}</div></div><div class="item"><div class="lbl">PI W-E</div><div class="val">${d('piWE',2,'')}</div></div><div class="item"><div class="lbl">IR Rotor (+)</div><div class="val">${d('p3p',1,' MΩ')}</div></div><div class="item"><div class="lbl">SR-1</div><div class="val">${d('p9s1',1,' mm')}</div></div><div class="item"><div class="lbl">SR-2</div><div class="val">${d('p9s2',1,' mm')}</div></div></div></div>`;
+  })()}
+  <div class="sec"><div class="sec-title">Conclusión y estado general</div>
+  <p style="font-size:11px;color:#52514E;line-height:1.7;margin-top:4px">${
+    cls==='ok'?'El generador presenta condiciones eléctricas dentro de los parámetros aceptables según norma IEEE 43-2013. Se recomienda mantener el plan de mantenimiento preventivo vigente y repetir las pruebas en el próximo ciclo programado.':
+    cls==='warn'?'El generador presenta parámetros en zona de atención. Se recomienda incrementar la frecuencia de monitoreo, revisar el estado del aislamiento en las fases con PI reducido, y programar mantenimiento correctivo en el corto plazo.':
+    'El generador presenta valores críticos fuera de los límites aceptables IEEE. Se recomienda suspender operación no esencial, realizar inspección visual del aislamiento y planificar mantenimiento correctivo inmediato antes de la próxima puesta en marcha.'
+  }</p></div>
+  <div class="sec"><div class="sec-title">Firmas y validación</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px">
+    <div><div style="border-bottom:1px solid #C3C2B7;padding-bottom:20px;margin-bottom:5px"></div>
+    <div style="font-size:9px;color:#898781">Técnico: <strong>${g(row,'tec')||'_______________________'}</strong></div>
+    <div style="font-size:9px;color:#898781">${g(row,'cargo')||''}</div></div>
+    <div><div style="border-bottom:1px solid #C3C2B7;padding-bottom:20px;margin-bottom:5px"></div>
+    <div style="font-size:9px;color:#898781">Supervisor: <strong>${g(row,'sup')||'_______________________'}</strong></div></div>
+  </div></div>
   <div class="footer">
     <span>Bijao Electric Company S.A. de C.V. &nbsp;|&nbsp; Departamento de Mantenimiento Eléctrico</span>
     <span>Generado: ${new Date().toLocaleString('es-HN')}</span>
@@ -1216,7 +1310,50 @@ function buildPDF(n, idx){
     secT('Observaciones');
     doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
     const lines=doc.splitTextToSize(g(row,'obs'),PW-28);
-    doc.text(lines,14,y); y+=lines.length*4.5+3;
+    doc.text(lines,14,y); y+=lines.length*4.5+4;
+  }
+
+  // ── Comparación vs campaña anterior ────────────────────────────────
+  const prevRow = rows.length > 1 ? rows[rows.length - 2] : null;
+  if(prevRow){
+    secT('Variación respecto a campaña anterior — ' + (g(prevRow,'year')||'prev.'));
+    const delta=(key,dec,unit,lbl)=>{
+      const cur=parseFloat(g(row,key)); const prv=parseFloat(g(prevRow,key));
+      if(isNaN(cur)||isNaN(prv)) return {label:lbl,val:'—',color:[137,135,129]};
+      const d=cur-prv; const sign=d>=0?'+':'';
+      const col=Math.abs(d)<0.01?[137,135,129]:d>0?[99,56,6]:[39,80,10];
+      return {label:lbl,val:`${sign}${d.toFixed(dec)} ${unit}  (${num(cur,dec)})`,color:col};
+    };
+    g3([delta('piUE',2,'','PI U-E'),delta('piVE',2,'','PI V-E'),delta('piWE',2,'','PI W-E'),
+        delta('p3p',1,'MΩ','IR Rot.(+)'),delta('p9s1',1,'mm','SR-1'),delta('p9s2',1,'mm','SR-2')]);
+  }
+
+  // ── Conclusión automática ───────────────────────────────────────────
+  if(y < 230){
+    secT('Conclusión y estado general');
+    const conclusionText = cls==='ok'
+      ? 'El generador presenta condiciones eléctricas dentro de los parámetros aceptables según norma IEEE 43-2013. Se recomienda mantener el plan de mantenimiento preventivo vigente y repetir las pruebas en el próximo ciclo programado.'
+      : cls==='warn'
+      ? 'El generador presenta parámetros en zona de atención. Se recomienda incrementar la frecuencia de monitoreo, revisar el estado del aislamiento en las fases con PI reducido, y programar mantenimiento correctivo en el corto plazo.'
+      : 'El generador presenta valores críticos fuera de los límites aceptables IEEE. Se recomienda suspender operación no esencial, realizar inspección visual del aislamiento y planificar mantenimiento correctivo inmediato antes de la próxima puesta en marcha.';
+    doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
+    const cLines=doc.splitTextToSize(conclusionText,PW-28);
+    doc.text(cLines,14,y); y+=cLines.length*4.5+6;
+  }
+
+  // ── Líneas de firma ─────────────────────────────────────────────────
+  if(y < 240){
+    secT('Firmas y validación');
+    const sigY=y+4;
+    doc.setDrawColor(180,178,170); doc.setLineWidth(0.4);
+    doc.line(14,sigY+10,86,sigY+10);
+    doc.line(PW/2+4,sigY+10,PW-14,sigY+10);
+    doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(82,81,78);
+    doc.text('Técnico responsable',14,sigY+15);
+    doc.text(g(row,'tec')||'',14,sigY+20); doc.text(g(row,'cargo')||'',14,sigY+24);
+    doc.text('Supervisor / Aprobado por',PW/2+4,sigY+15);
+    doc.text(g(row,'sup')||'',PW/2+4,sigY+20);
+    y=sigY+28;
   }
 
   // Footer
